@@ -49,10 +49,12 @@ export function JobPostingJsonLd({ opportunity }: JobPostingJsonLdProps) {
     url: absoluteUrl(`/opportunities/${opportunity.slug}`),
   };
 
+  const json = JSON.stringify(payload).replace(/</g, "\\u003c");
+
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(payload) }}
+      dangerouslySetInnerHTML={{ __html: json }}
     />
   );
 }

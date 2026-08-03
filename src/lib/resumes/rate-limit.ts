@@ -36,7 +36,7 @@ export async function isResumeProcessingRateLimited(
     .gte("created_at", since);
 
   if (error) {
-    return false;
+    return true;
   }
   return (count ?? 0) >= limit;
 }

@@ -13,6 +13,8 @@ import {
 } from "@/lib/validations/admin-job";
 import { logDbError, mapDbError } from "@/lib/errors/map-db-error";
 import { PUBLIC_GENERIC_ERROR } from "@/lib/errors/public-messages";
+import { logServerError } from "@/lib/logging/server-error";
+import { sendApplicationStatusChangedEmail } from "@/lib/email/application-status";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import type { JobStatus } from "@/types/database";
@@ -168,6 +170,19 @@ export async function updateApplicationStatusAction(input: {
   }
 
   const supabase = await createClient();
+
+  const { data: application, error: readError } = await supabase
+    .from("applications")
+    .select("candidate_id")
+    .eq("id", input.applicationId)
+    .eq("job_id", input.jobId)
+    .maybeSingle();
+
+  if (readError || !application) {
+    logDbError("admin.updateApplicationStatus.read", readError);
+    return { ok: false, message: "Application not found." };
+  }
+
   const { error } = await supabase
     .from("applications")
     .update({ status: parsed.data })
@@ -181,6 +196,28 @@ export async function updateApplicationStatusAction(input: {
 
   revalidatePath(`/admin/jobs/${input.jobId}/applications`);
   revalidatePath("/dashboard/applications");
+
+  const [{ data: candidate }, { data: job }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("email")
+      .eq("id", application.candidate_id)
+      .maybeSingle(),
+    supabase.from("jobs").select("title").eq("id", input.jobId).maybeSingle(),
+  ]);
+
+  if (candidate?.email && job?.title) {
+    try {
+      await sendApplicationStatusChangedEmail({
+        to: candidate.email,
+        jobTitle: job.title,
+        status: parsed.data,
+      });
+    } catch (emailError) {
+      logServerError("admin.updateApplicationStatus.email", emailError);
+    }
+  }
+
   return { ok: true, message: "Application status updated." };
 }
 

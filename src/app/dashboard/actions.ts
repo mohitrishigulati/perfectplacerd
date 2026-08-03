@@ -204,17 +204,6 @@ export async function registerResumeAction(input: {
     return { ok: false, message: mapDbError(error ?? {}).message };
   }
 
-  const { error: demoteError } = await supabase
-    .from("resumes")
-    .update({ is_primary: false })
-    .eq("user_id", user.id)
-    .neq("id", inserted.id)
-    .eq("is_primary", true);
-
-  if (demoteError) {
-    logDbError("dashboard.registerResume.demotePrimary", demoteError);
-  }
-
   await recordResumeProcessingEvent(supabase, user.id, "upload", inserted.id);
 
   revalidateDashboard();

@@ -34,9 +34,8 @@ describe("pdf text extraction", () => {
   });
 });
 
-describe("image OCR flow", () => {
-  it("returns ocr_unavailable when OCR provider is not configured", async () => {
-    vi.stubEnv("RESUME_OCR_PROVIDER", "");
+describe("image resume handling", () => {
+  it("returns ocr_unavailable for image resumes (automatic reading is not supported)", async () => {
     const png = new Uint8Array([
       0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00,
     ]);
@@ -46,44 +45,5 @@ describe("image OCR flow", () => {
       expect(result.category).toBe("ocr_unavailable");
       expect(result.preserveUpload).toBe(true);
     }
-    vi.unstubAllEnvs();
-  });
-
-  it("sends PNG input with the correct image media type", async () => {
-    vi.stubEnv("RESUME_OCR_PROVIDER", "openai");
-    vi.stubEnv("OPENAI_API_KEY", "test-only-key");
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        choices: [
-          {
-            message: {
-              content:
-                "Jane Doe jane@example.com +91 9876543210 Product leader with ten years of experience",
-            },
-          },
-        ],
-      }),
-    });
-    vi.stubGlobal("fetch", fetchMock);
-
-    const png = new Uint8Array([
-      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00,
-    ]);
-    const result = await extractResumeTextFromBytes(png, "png");
-
-    expect(result.ok).toBe(true);
-    const request = fetchMock.mock.calls[0]?.[1] as RequestInit;
-    const body = JSON.parse(String(request.body)) as {
-      messages: Array<{
-        content?: Array<{ image_url?: { url?: string } }>;
-      }>;
-    };
-    expect(body.messages[1]?.content?.[1]?.image_url?.url).toMatch(
-      /^data:image\/png;base64,/,
-    );
-
-    vi.unstubAllGlobals();
-    vi.unstubAllEnvs();
   });
 });

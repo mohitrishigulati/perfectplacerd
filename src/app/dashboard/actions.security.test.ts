@@ -77,12 +77,14 @@ describe("dashboard application security actions", () => {
     expect(result.ok).toBe(true);
   });
 
-  it("registerResumeAction inserts and demotes primary without deleting prior resume rows", async () => {
+  it("registerResumeAction inserts the new resume without deleting prior resume rows", async () => {
+    // Demotion of the previous primary resume is handled atomically by the
+    // resumes_enforce_single_primary DB trigger, not by the app, so this
+    // only needs to verify the insert happens and nothing deletes rows.
     const insertSingle = vi.fn(async () => ({
       data: { id: "resume-new" },
       error: null,
     }));
-    const demoteChain = vi.fn().mockResolvedValue({ error: null });
 
     fromMock.mockImplementation((table: string) => {
       if (table !== "resumes") {
@@ -92,13 +94,6 @@ describe("dashboard application security actions", () => {
         insert: () => ({
           select: () => ({
             single: insertSingle,
-          }),
-        }),
-        update: () => ({
-          eq: () => ({
-            neq: () => ({
-              eq: demoteChain,
-            }),
           }),
         }),
         delete: vi.fn(() => {
@@ -119,7 +114,6 @@ describe("dashboard application security actions", () => {
 
     expect(result.ok).toBe(true);
     expect(insertSingle).toHaveBeenCalled();
-    expect(demoteChain).toHaveBeenCalled();
     expect(storageRemoveMock).not.toHaveBeenCalled();
   });
 });
