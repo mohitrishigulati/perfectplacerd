@@ -44,7 +44,6 @@ export function AuthForm() {
 
     const result = await sendSignInOtpAction({
       email: emailValue,
-      origin: window.location.origin,
       nextPath,
     });
 

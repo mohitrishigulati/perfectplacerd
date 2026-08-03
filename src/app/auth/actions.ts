@@ -1,6 +1,6 @@
 "use server";
 
-import { sanitizeNextPath } from "@/lib/auth/paths";
+import { buildSignInEmailRedirectTo } from "@/lib/auth/sign-in-redirect";
 import { mapAuthError } from "@/lib/errors/map-auth-error";
 import { PUBLIC_SIGN_IN_UNAVAILABLE } from "@/lib/errors/public-messages";
 import { logServerError } from "@/lib/logging/server-error";
@@ -14,7 +14,6 @@ export type AuthActionResult =
 
 export async function sendSignInOtpAction(input: {
   email: string;
-  origin: string;
   nextPath: string;
 }): Promise<AuthActionResult> {
   const parsed = authEmailSchema.safeParse({ email: input.email });
@@ -35,8 +34,7 @@ export async function sendSignInOtpAction(input: {
     };
   }
 
-  const next = sanitizeNextPath(input.nextPath);
-  const emailRedirectTo = `${input.origin}/auth/callback?next=${encodeURIComponent(next)}`;
+  const emailRedirectTo = buildSignInEmailRedirectTo(input.nextPath);
 
   try {
     const supabase = await createClient();
