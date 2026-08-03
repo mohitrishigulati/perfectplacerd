@@ -34,6 +34,8 @@ export type ResumeParsingStatus =
   | "completed"
   | "failed";
 
+export type ContactInquiryType = "candidate" | "employer" | "general";
+
 export type Json =
   | string
   | number
@@ -58,6 +60,7 @@ export interface Database {
           skills: string[];
           preferences: Json;
           profile_visibility: ProfileVisibility;
+          notify_application_status: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -73,6 +76,7 @@ export interface Database {
           skills?: string[];
           preferences?: Json;
           profile_visibility?: ProfileVisibility;
+          notify_application_status?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -88,6 +92,7 @@ export interface Database {
           skills?: string[];
           preferences?: Json;
           profile_visibility?: ProfileVisibility;
+          notify_application_status?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -345,6 +350,39 @@ export interface Database {
           processed_at?: string | null;
           created_at?: string;
           updated_at?: string;
+        };
+        Relationships: [];
+      };
+      contact_inquiries: {
+        Row: {
+          id: string;
+          inquiry_type: ContactInquiryType;
+          name: string;
+          email: string;
+          phone: string | null;
+          company: string | null;
+          message: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          inquiry_type?: ContactInquiryType;
+          name: string;
+          email: string;
+          phone?: string | null;
+          company?: string | null;
+          message: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          inquiry_type?: ContactInquiryType;
+          name?: string;
+          email?: string;
+          phone?: string | null;
+          company?: string | null;
+          message?: string;
+          created_at?: string;
         };
         Relationships: [];
       };

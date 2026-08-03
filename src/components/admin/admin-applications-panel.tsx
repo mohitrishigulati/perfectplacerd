@@ -21,16 +21,20 @@ const STATUSES: ApplicationStatus[] = [
 export function AdminApplicationsPanel({
   jobId,
   applications,
+  updateStatus = updateApplicationStatusAction,
+  downloadResume = createResumeDownloadUrlAction,
 }: {
   jobId: string;
   applications: AdminApplicationRow[];
+  updateStatus?: typeof updateApplicationStatusAction;
+  downloadResume?: typeof createResumeDownloadUrlAction;
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
 
   async function onStatusChange(applicationId: string, status: ApplicationStatus) {
     setError(null);
-    const result = await updateApplicationStatusAction({
+    const result = await updateStatus({
       applicationId,
       jobId,
       status,
@@ -44,7 +48,7 @@ export function AdminApplicationsPanel({
 
   async function onDownloadResume(resumeId: string) {
     setError(null);
-    const result = await createResumeDownloadUrlAction(resumeId);
+    const result = await downloadResume(resumeId);
     if (!result.ok || !result.url) {
       setError(result.message ?? "Something went wrong");
       return;

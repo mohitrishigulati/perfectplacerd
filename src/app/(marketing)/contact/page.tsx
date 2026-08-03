@@ -1,4 +1,5 @@
 import { PageHero, ProseSection } from "@/components/marketing/page-hero";
+import { ContactForm } from "@/components/marketing/contact-form";
 import { BRAND, OFFICES } from "@/content/marketing";
 import { createPublicMetadata } from "@/lib/site/metadata";
 
@@ -18,6 +19,13 @@ export default function ContactPage() {
         description={`Call our offices or write to ${BRAND.email} for candidate registration and client mandates.`}
       />
       <ProseSection>
+        <h2>Send us a message</h2>
+        <p>
+          Tell us a bit about what you need and we&apos;ll route it to the
+          right office.
+        </p>
+        <ContactForm />
+
         <h2>Our offices</h2>
         <p>Connect with the office nearest to you for recruitment and consulting support.</p>
         <div className="not-prose grid gap-6 sm:grid-cols-3">

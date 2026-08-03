@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { createResumeDownloadUrlAction } from "@/app/admin/actions";
+import { createResumeDownloadUrlAction, messageCandidateAction } from "@/app/admin/actions";
 import type { AdminCandidateRow } from "@/lib/admin/queries";
 
 function matchesQuery(candidate: AdminCandidateRow, query: string): boolean {
@@ -18,6 +18,75 @@ function matchesQuery(candidate: AdminCandidateRow, query: string): boolean {
   return haystack.includes(query);
 }
 
+function CandidateMessageForm({
+  candidateId,
+  onClose,
+}: {
+  candidateId: string;
+  onClose: () => void;
+}) {
+  const [subject, setSubject] = useState("");
+  const [message, setMessage] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
+
+  async function onSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    setSubmitting(true);
+    setResult(null);
+    const response = await messageCandidateAction({ candidateId, subject, message });
+    setSubmitting(false);
+    setResult({ ok: response.ok, message: response.message ?? "" });
+    if (response.ok) {
+      setSubject("");
+      setMessage("");
+    }
+  }
+
+  return (
+    <form onSubmit={onSubmit} className="mt-4 space-y-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+      <div>
+        <label htmlFor={`subject-${candidateId}`} className="block text-xs font-medium text-zinc-500">
+          Subject
+        </label>
+        <input
+          id={`subject-${candidateId}`}
+          className="field-input mt-1"
+          value={subject}
+          onChange={(event) => setSubject(event.target.value)}
+          required
+        />
+      </div>
+      <div>
+        <label htmlFor={`message-${candidateId}`} className="block text-xs font-medium text-zinc-500">
+          Message
+        </label>
+        <textarea
+          id={`message-${candidateId}`}
+          className="field-input mt-1"
+          rows={4}
+          value={message}
+          onChange={(event) => setMessage(event.target.value)}
+          required
+        />
+      </div>
+      {result && (
+        <p className={`text-sm ${result.ok ? "text-green-700" : "text-red-600"}`} role="alert">
+          {result.ok ? "Message sent." : result.message}
+        </p>
+      )}
+      <div className="flex gap-2">
+        <button type="submit" className="btn-primary" disabled={submitting}>
+          {submitting ? "Sending…" : "Send message"}
+        </button>
+        <button type="button" className="btn-secondary" onClick={onClose}>
+          Cancel
+        </button>
+      </div>
+    </form>
+  );
+}
+
 export function AdminCandidatesTable({
   candidates,
 }: {
@@ -25,6 +94,7 @@ export function AdminCandidatesTable({
 }) {
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [messagingId, setMessagingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
   const filteredCandidates = useMemo(() => {
@@ -120,14 +190,31 @@ export function AdminCandidatesTable({
                         <dd>{candidate.skills.length ? candidate.skills.join(", ") : "—"}</dd>
                       </div>
                     </dl>
-                    {candidate.primaryResume && (
+                    <div className="mt-4 flex gap-2">
+                      {candidate.primaryResume && (
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          onClick={() => onDownload(candidate.primaryResume!.id)}
+                        >
+                          Download primary resume
+                        </button>
+                      )}
                       <button
                         type="button"
-                        className="btn-secondary mt-4"
-                        onClick={() => onDownload(candidate.primaryResume!.id)}
+                        className="btn-secondary"
+                        onClick={() =>
+                          setMessagingId(messagingId === candidate.id ? null : candidate.id)
+                        }
                       >
-                        Download primary resume
+                        {messagingId === candidate.id ? "Cancel message" : "Message candidate"}
                       </button>
+                    </div>
+                    {messagingId === candidate.id && (
+                      <CandidateMessageForm
+                        candidateId={candidate.id}
+                        onClose={() => setMessagingId(null)}
+                      />
                     )}
                   </div>
                 )}

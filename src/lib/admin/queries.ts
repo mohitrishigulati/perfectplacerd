@@ -4,20 +4,76 @@ import { assertAdmin } from "@/lib/admin/auth";
 import { createClient } from "@/lib/supabase/server";
 import type { ApplicationStatus, JobStatus, ProfileVisibility } from "@/types/database";
 
-export async function getAdminOverviewStats() {
+const STATUS_FUNNEL_ORDER: ApplicationStatus[] = [
+  "submitted",
+  "under_review",
+  "accepted",
+  "rejected",
+  "withdrawn",
+];
+
+export type AdminOverviewStats = {
+  jobs: number;
+  applications: number;
+  candidates: number;
+  statusFunnel: Record<ApplicationStatus, number>;
+  applicationsLast7Days: number;
+  applicationsPrevious7Days: number;
+  topJobs: { id: string; title: string; applicationCount: number }[];
+};
+
+export async function getAdminOverviewStats(): Promise<AdminOverviewStats> {
   await assertAdmin("/admin");
   const supabase = await createClient();
 
-  const [jobs, applications, profiles] = await Promise.all([
+  const [jobs, profiles, applications, jobTitles] = await Promise.all([
     supabase.from("jobs").select("id", { count: "exact", head: true }),
-    supabase.from("applications").select("id", { count: "exact", head: true }),
     supabase.from("profiles").select("id", { count: "exact", head: true }),
+    supabase.from("applications").select("job_id, status, created_at"),
+    supabase.from("jobs").select("id, title"),
   ]);
+
+  const statusFunnel = STATUS_FUNNEL_ORDER.reduce(
+    (acc, status) => ({ ...acc, [status]: 0 }),
+    {} as Record<ApplicationStatus, number>,
+  );
+
+  const now = Date.now();
+  const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+  let applicationsLast7Days = 0;
+  let applicationsPrevious7Days = 0;
+  const countByJob = new Map<string, number>();
+
+  for (const application of applications.data ?? []) {
+    statusFunnel[application.status] = (statusFunnel[application.status] ?? 0) + 1;
+    countByJob.set(application.job_id, (countByJob.get(application.job_id) ?? 0) + 1);
+
+    const ageMs = now - new Date(application.created_at).getTime();
+    if (ageMs <= sevenDaysMs) {
+      applicationsLast7Days += 1;
+    } else if (ageMs <= sevenDaysMs * 2) {
+      applicationsPrevious7Days += 1;
+    }
+  }
+
+  const titleById = new Map((jobTitles.data ?? []).map((job) => [job.id, job.title]));
+  const topJobs = [...countByJob.entries()]
+    .map(([id, applicationCount]) => ({
+      id,
+      title: titleById.get(id) ?? "Untitled opportunity",
+      applicationCount,
+    }))
+    .sort((a, b) => b.applicationCount - a.applicationCount)
+    .slice(0, 5);
 
   return {
     jobs: jobs.count ?? 0,
-    applications: applications.count ?? 0,
+    applications: applications.data?.length ?? 0,
     candidates: profiles.count ?? 0,
+    statusFunnel,
+    applicationsLast7Days,
+    applicationsPrevious7Days,
+    topJobs,
   };
 }
 

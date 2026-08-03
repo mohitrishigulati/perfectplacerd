@@ -4,11 +4,14 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth/session";
 import type { Json } from "@/types/database";
 import {
+  changeEmailSchema,
   deleteAccountSchema,
+  notificationPreferencesSchema,
   profileFormSchema,
   resumeRegisterSchema,
   type JobPreferences,
 } from "@/lib/validations/profile";
+import { buildSignInEmailRedirectTo } from "@/lib/auth/sign-in-redirect";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { logDbError, mapDbError } from "@/lib/errors/map-db-error";
@@ -326,4 +329,56 @@ export async function deleteAccountAction(input: unknown): Promise<ActionResult>
 
   await supabase.auth.signOut();
   return { ok: true, message: "Account deleted." };
+}
+
+export async function updateEmailAction(input: unknown): Promise<ActionResult> {
+  await requireUser("/dashboard/settings");
+  const parsed = changeEmailSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      message: parsed.error.issues[0]?.message ?? "Enter a valid email address",
+    };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.updateUser(
+    { email: parsed.data.email },
+    { emailRedirectTo: buildSignInEmailRedirectTo("/dashboard/settings") },
+  );
+
+  if (error) {
+    logDbError("dashboard.updateEmail", error);
+    return { ok: false, message: PUBLIC_GENERIC_ERROR };
+  }
+
+  return {
+    ok: true,
+    message:
+      "Confirmation links were sent to your current and new email addresses. Your email updates once you confirm.",
+  };
+}
+
+export async function updateNotificationPreferencesAction(
+  input: unknown,
+): Promise<ActionResult> {
+  const user = await requireUser("/dashboard/settings");
+  const parsed = notificationPreferencesSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, message: "Invalid preference." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("profiles")
+    .update({ notify_application_status: parsed.data.notifyApplicationStatus })
+    .eq("id", user.id);
+
+  if (error) {
+    logDbError("dashboard.updateNotificationPreferences", error);
+    return { ok: false, message: mapDbError(error).message };
+  }
+
+  revalidateDashboard();
+  return { ok: true, message: "Preference saved." };
 }

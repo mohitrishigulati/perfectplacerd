@@ -18,6 +18,7 @@ export type DashboardProfile = {
   skills: string[];
   preferences: JobPreferences;
   profile_visibility: ProfileVisibility;
+  notify_application_status: boolean;
 };
 
 export async function getDashboardProfile(): Promise<DashboardProfile> {
@@ -26,7 +27,7 @@ export async function getDashboardProfile(): Promise<DashboardProfile> {
   const { data, error } = await supabase
     .from("profiles")
     .select(
-      "id, email, full_name, phone, headline, location, bio, skills, preferences, profile_visibility",
+      "id, email, full_name, phone, headline, location, bio, skills, preferences, profile_visibility, notify_application_status",
     )
     .eq("id", user.id)
     .single();

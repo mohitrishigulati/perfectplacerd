@@ -19,6 +19,8 @@ import type { Tables } from "@/types/database";
 type Props = {
   mode: "create" | "edit";
   job?: Tables<"jobs">;
+  createJob?: typeof createJobAction;
+  updateJob?: typeof updateJobAction;
 };
 
 function toFormValues(job?: Tables<"jobs">): AdminJobFormValues {
@@ -54,7 +56,12 @@ function toFormValues(job?: Tables<"jobs">): AdminJobFormValues {
   };
 }
 
-export function AdminJobForm({ mode, job }: Props) {
+export function AdminJobForm({
+  mode,
+  job,
+  createJob = createJobAction,
+  updateJob = updateJobAction,
+}: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -67,22 +74,23 @@ export function AdminJobForm({ mode, job }: Props) {
     setError(null);
     setMessage(null);
 
-    const parsed = adminJobFormSchema.safeParse(raw);
+    const withSlug = {
+      ...raw,
+      slug: raw.slug.trim() || slugifyTitle(raw.title),
+    };
+
+    const parsed = adminJobFormSchema.safeParse(withSlug);
     if (!parsed.success) {
       setError(parsed.error.issues[0]?.message ?? "Invalid form");
       return;
     }
 
     const values = parsed.data;
-    const payload = {
-      ...values,
-      slug: values.slug || slugifyTitle(values.title),
-    };
 
     const result =
       mode === "create"
-        ? await createJobAction(payload)
-        : await updateJobAction(job!.id, payload);
+        ? await createJob(values)
+        : await updateJob(job!.id, values);
 
     if (!result.ok) {
       setError(result.message);

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { sendEmail } from "@/lib/email/send";
+import { escapeHtml } from "@/lib/email/escape-html";
 import { absoluteUrl } from "@/lib/site/url";
 import type { ApplicationStatus } from "@/types/database";
 
@@ -11,15 +12,6 @@ const STATUS_LABELS: Record<ApplicationStatus, string> = {
   rejected: "Not selected",
   withdrawn: "Withdrawn",
 };
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
 
 export function buildApplicationStatusChangedEmail(input: {
   jobTitle: string;

@@ -55,3 +55,23 @@ export const deleteAccountSchema = z.object({
 });
 
 export type DeleteAccountValues = z.infer<typeof deleteAccountSchema>;
+
+export const changeEmailSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .min(1, "Email is required")
+    .email("Enter a valid email address")
+    .max(255),
+});
+
+export type ChangeEmailValues = z.infer<typeof changeEmailSchema>;
+
+export const notificationPreferencesSchema = z.object({
+  notifyApplicationStatus: z.boolean(),
+});
+
+export type NotificationPreferencesValues = z.infer<
+  typeof notificationPreferencesSchema
+>;

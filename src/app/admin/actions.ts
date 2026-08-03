@@ -15,6 +15,9 @@ import { logDbError, mapDbError } from "@/lib/errors/map-db-error";
 import { PUBLIC_GENERIC_ERROR } from "@/lib/errors/public-messages";
 import { logServerError } from "@/lib/logging/server-error";
 import { sendApplicationStatusChangedEmail } from "@/lib/email/application-status";
+import { sendAdminMessageEmail } from "@/lib/email/admin-message";
+import { isEmailConfigured } from "@/lib/email/send";
+import { candidateMessageSchema } from "@/lib/validations/candidate-message";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import type { JobStatus } from "@/types/database";
@@ -200,13 +203,13 @@ export async function updateApplicationStatusAction(input: {
   const [{ data: candidate }, { data: job }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("email")
+      .select("email, notify_application_status")
       .eq("id", application.candidate_id)
       .maybeSingle(),
     supabase.from("jobs").select("title").eq("id", input.jobId).maybeSingle(),
   ]);
 
-  if (candidate?.email && job?.title) {
+  if (candidate?.email && candidate.notify_application_status && job?.title) {
     try {
       await sendApplicationStatusChangedEmail({
         to: candidate.email,
@@ -219,6 +222,53 @@ export async function updateApplicationStatusAction(input: {
   }
 
   return { ok: true, message: "Application status updated." };
+}
+
+export async function messageCandidateAction(input: {
+  candidateId: string;
+  subject: unknown;
+  message: unknown;
+}): Promise<AdminActionResult> {
+  await assertAdmin("/admin/candidates");
+
+  if (!isEmailConfigured()) {
+    return {
+      ok: false,
+      message: "Email isn't configured yet. Set RESEND_API_KEY to send messages.",
+    };
+  }
+
+  const parsed = candidateMessageSchema.safeParse({
+    subject: input.subject,
+    message: input.message,
+  });
+  if (!parsed.success) {
+    return { ok: false, message: parsed.error.issues[0]?.message ?? "Invalid message." };
+  }
+
+  const supabase = await createClient();
+  const { data: candidate, error } = await supabase
+    .from("profiles")
+    .select("email")
+    .eq("id", input.candidateId)
+    .maybeSingle();
+
+  if (error || !candidate?.email) {
+    logDbError("admin.messageCandidate.read", error);
+    return { ok: false, message: "Candidate not found." };
+  }
+
+  const sent = await sendAdminMessageEmail({
+    to: candidate.email,
+    subject: parsed.data.subject,
+    message: parsed.data.message,
+  });
+
+  if (!sent) {
+    return { ok: false, message: "Message could not be sent. Try again later." };
+  }
+
+  return { ok: true, message: "Message sent." };
 }
 
 export async function createResumeDownloadUrlAction(
