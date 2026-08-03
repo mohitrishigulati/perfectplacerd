@@ -1,4 +1,5 @@
 import { ApplicationsList } from "@/components/dashboard/applications-list";
+import { DashboardPageHeader } from "@/components/dashboard/dashboard-page-header";
 import { getCandidateApplications } from "@/lib/dashboard/queries";
 
 export default async function DashboardApplicationsPage() {
@@ -6,12 +7,11 @@ export default async function DashboardApplicationsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Applications</h1>
-        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-          Track roles you&apos;ve applied to and their current status.
-        </p>
-      </div>
+      <DashboardPageHeader
+        title="Applications"
+        description="Track roles you've applied to and their current status."
+        action={{ href: "/opportunities", label: "Browse opportunities" }}
+      />
       <ApplicationsList applications={applications} />
     </div>
   );

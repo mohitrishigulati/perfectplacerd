@@ -1,5 +1,8 @@
 import type { JobPreferences } from "@/lib/validations/profile";
-import { calculateProfileCompletion } from "@/lib/profile/completion";
+import {
+  calculateProfileCompletion,
+  type ProfileCompletionResult,
+} from "@/lib/profile/completion";
 import { requireUser } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import type { ApplicationStatus, ProfileVisibility } from "@/types/database";
@@ -63,6 +66,156 @@ export async function getProfileCompletionForUser() {
     preferences: (profile?.preferences ?? {}) as JobPreferences,
     hasPrimaryResume: Boolean(resume),
   });
+}
+
+export type DashboardOverview = {
+  displayName: string;
+  email: string;
+  headline: string | null;
+  profileVisibility: ProfileVisibility;
+  completion: ProfileCompletionResult;
+  hasPrimaryResume: boolean;
+  stats: {
+    applications: number;
+    saved: number;
+    inReview: number;
+  };
+  recentApplications: ApplicationRow[];
+  recentSaved: SavedJobRow[];
+};
+
+export async function getDashboardOverview(): Promise<DashboardOverview> {
+  const user = await requireUser("/dashboard");
+  const supabase = await createClient();
+
+  const [
+    { data: profile },
+    { data: resume },
+    { data: applications },
+    { data: savedRows },
+  ] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select(
+        "full_name, phone, headline, location, bio, skills, preferences, profile_visibility",
+      )
+      .eq("id", user.id)
+      .single(),
+    supabase
+      .from("resumes")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("is_primary", true)
+      .maybeSingle(),
+    supabase
+      .from("applications")
+      .select("id, status, created_at, cover_letter, job_id")
+      .eq("candidate_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(5),
+    supabase
+      .from("saved_jobs")
+      .select("id, created_at, job_id")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(5),
+  ]);
+
+  const completion = calculateProfileCompletion({
+    ...profile,
+    skills: profile?.skills ?? [],
+    preferences: (profile?.preferences ?? {}) as JobPreferences,
+    hasPrimaryResume: Boolean(resume),
+  });
+
+  const [{ count: applicationsCount }, { count: savedCount }, { count: inReviewCount }] =
+    await Promise.all([
+      supabase
+        .from("applications")
+        .select("id", { count: "exact", head: true })
+        .eq("candidate_id", user.id),
+      supabase
+        .from("saved_jobs")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id),
+      supabase
+        .from("applications")
+        .select("id", { count: "exact", head: true })
+        .eq("candidate_id", user.id)
+        .in("status", ["submitted", "under_review"]),
+    ]);
+
+  const applicationRows = applications ?? [];
+
+  const jobIds = [
+    ...new Set([
+      ...applicationRows.map((row) => row.job_id),
+      ...(savedRows ?? []).map((row) => row.job_id),
+    ]),
+  ];
+
+  const { data: jobs } = jobIds.length
+    ? await supabase
+        .from("jobs")
+        .select(
+          "id, title, slug, location, employment_type, status",
+        )
+        .in("id", jobIds)
+    : { data: [] as const };
+
+  const jobsById = new Map((jobs ?? []).map((job) => [job.id, job]));
+
+  const recentApplications: ApplicationRow[] = applicationRows
+    .slice(0, 3)
+    .map((application) => ({
+      id: application.id,
+      status: application.status,
+      created_at: application.created_at,
+      cover_letter: application.cover_letter,
+      job: jobsById.get(application.job_id) ?? null,
+    }));
+
+  const recentSaved: SavedJobRow[] = (savedRows ?? []).flatMap((row) => {
+    const job = jobsById.get(row.job_id);
+    if (!job || job.status !== "published") {
+      return [];
+    }
+    return [
+      {
+        id: row.id,
+        created_at: row.created_at,
+        job: {
+          id: job.id,
+          title: job.title,
+          slug: job.slug,
+          location: job.location,
+          employment_type: job.employment_type,
+        },
+      },
+    ];
+  }).slice(0, 3);
+
+  const displayName =
+    profile?.full_name?.trim() ||
+    user.email?.split("@")[0] ||
+    "Candidate";
+
+  return {
+    displayName,
+    email: user.email ?? "",
+    headline: profile?.headline ?? null,
+    profileVisibility:
+      (profile?.profile_visibility as ProfileVisibility) ?? "private",
+    completion,
+    hasPrimaryResume: Boolean(resume),
+    stats: {
+      applications: applicationsCount ?? applicationRows.length,
+      saved: savedCount ?? (savedRows?.length ?? 0),
+      inReview: inReviewCount ?? 0,
+    },
+    recentApplications,
+    recentSaved,
+  };
 }
 
 export type PrimaryResume = {

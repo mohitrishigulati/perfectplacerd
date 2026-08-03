@@ -31,7 +31,7 @@ Greenfield Next.js application for Perfect Placer. This project lives alongside 
    cp .env.example .env.local
    ```
 
-   Set `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and (for server tasks) `SUPABASE_SERVICE_ROLE_KEY` from your [Supabase API settings](https://supabase.com/dashboard/project/_/settings/api).
+   Set `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (or anon key), and (for server tasks) `SUPABASE_SERVICE_ROLE_KEY` from your [Supabase API settings](https://supabase.com/dashboard/project/_/settings/api).
 
 3. In **Authentication → URL configuration**, add redirect URLs:
    - `http://localhost:3000/auth/callback`
@@ -49,7 +49,17 @@ Greenfield Next.js application for Perfect Placer. This project lives alongside 
 
    Open [http://localhost:3000](http://localhost:3000).
 
-## Authentication
+## Production URL
+
+The v2 app is deployed at **[https://perfect-placer-v2.vercel.app](https://perfect-placer-v2.vercel.app)**.
+
+- **`https://perfectplacerd.vercel.app`** does not exist (404) — the GitHub repo is named `perfectplacerd`, but Vercel uses a different subdomain.
+- **`https://perfectplacer.vercel.app`** is a separate older Vercel project, not this repo.
+
+In Supabase **Authentication → URL configuration**, set **Site URL** and **Redirect URLs** to **`https://perfect-placer-v2.vercel.app`** and **`https://perfect-placer-v2.vercel.app/auth/callback`** (not `perfectplacerd.vercel.app`, or magic links will 404).
+
+After changing env vars in Vercel, **Redeploy** so the client bundle picks up `NEXT_PUBLIC_*` values.
+
 
 Passwordless email OTP is implemented at `/auth`, with `/auth/callback` for magic links and POST `/auth/sign-out` to end the session.
 

@@ -1,14 +1,14 @@
+import { DashboardPageHeader } from "@/components/dashboard/dashboard-page-header";
 import { SettingsPanel } from "@/components/dashboard/settings-panel";
 
 export default function DashboardSettingsPage() {
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Settings</h1>
-        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-          Privacy controls, data export, and account deletion.
-        </p>
-      </div>
+      <DashboardPageHeader
+        title="Settings"
+        description="Privacy controls, data export, and account deletion."
+        action={{ href: "/dashboard", label: "Back to overview" }}
+      />
       <SettingsPanel />
     </div>
   );

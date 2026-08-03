@@ -15,7 +15,7 @@ From **Project Settings → API**, copy:
 | Variable | Where to find it |
 | -------- | ---------------- |
 | `NEXT_PUBLIC_SUPABASE_URL` | Project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `anon` `public` key |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Publishable key (or use `NEXT_PUBLIC_SUPABASE_ANON_KEY`) |
 | `SUPABASE_SERVICE_ROLE_KEY` | `service_role` key (server only; never expose to the browser) |
 
 In the repo root:
@@ -98,8 +98,18 @@ Quick checks in the SQL Editor using [JWT simulation](https://supabase.com/docs/
 ## 6. Authentication (email OTP)
 
 1. **Authentication → Providers → Email**: enable email sign-in (OTP / magic link).
-2. **Authentication → URL configuration**: add `http://localhost:3000/auth/callback` (and production `/auth/callback`).
-3. Sign in at `/auth`, then visit `/candidate`. Promote admins with `grant_admin_by_email` before using `/admin`.
+2. **Authentication → URL configuration**:
+   - **Site URL**: your app origin (e.g. `https://perfect-placer-v2.vercel.app` or `http://localhost:3000`).
+   - **Redirect URLs**: add `http://localhost:3000/auth/callback` and `https://your-production-domain/auth/callback`.
+3. **Email template (Magic Link)**: include the one-time code so users can paste it on `/auth`:
+   - Supabase → **Authentication → Email templates → Magic Link**
+   - Add a line such as: `Your sign-in code: {{ .Token }}` (keep the magic link if you want click-to-sign-in as well).
+4. **Vercel**: set `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (or anon key), and `SUPABASE_SERVICE_ROLE_KEY` under **Project → Settings → Environment Variables** for Production, then **Redeploy** (required so `NEXT_PUBLIC_*` values are baked into the client bundle).
+5. Sign in at `/auth`, then visit `/dashboard`. Promote admins with `grant_admin_by_email` before using `/admin`.
+
+If no email arrives: check **Authentication → Logs** in Supabase, spam/junk folder, and rate limits on the built-in mailer (custom SMTP improves deliverability).
+
+**“Email rate limit exceeded”:** The default Supabase mailer caps auth emails per hour (easy to hit while testing). Wait ~60 minutes or configure **Project Settings → Authentication → SMTP** (Resend, SendGrid, etc.) for higher limits.
 
 The app uses only the **anon** key in the browser and middleware. Admin checks query `admin_users` with the signed-in user’s JWT (RLS). Do not put `SUPABASE_SERVICE_ROLE_KEY` in any `NEXT_PUBLIC_*` variable or client bundle.
 

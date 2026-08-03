@@ -1,3 +1,4 @@
+import { DashboardPageHeader } from "@/components/dashboard/dashboard-page-header";
 import { ProfileEditorForm } from "@/components/dashboard/profile-editor-form";
 import {
   getDashboardProfile,
@@ -12,13 +13,11 @@ export default async function DashboardProfilePage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Profile</h1>
-        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-          Update your details, skills, preferences, and choose who can see your
-          profile.
-        </p>
-      </div>
+      <DashboardPageHeader
+        title="Profile"
+        description="Update your details, skills, preferences, and choose who can see your profile."
+        action={{ href: "/dashboard", label: "Back to overview" }}
+      />
       <ProfileEditorForm profile={profile} hasPrimaryResume={Boolean(resume)} />
     </div>
   );

@@ -1,3 +1,4 @@
+import { DashboardPageHeader } from "@/components/dashboard/dashboard-page-header";
 import { SavedJobsList } from "@/components/dashboard/saved-jobs-list";
 import { getSavedJobs } from "@/lib/dashboard/queries";
 
@@ -6,12 +7,11 @@ export default async function DashboardSavedPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Saved opportunities</h1>
-        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-          Opportunities you saved from the browse experience.
-        </p>
-      </div>
+      <DashboardPageHeader
+        title="Saved opportunities"
+        description="Opportunities you saved from the browse experience."
+        action={{ href: "/opportunities", label: "Browse more" }}
+      />
       <SavedJobsList jobs={jobs} />
     </div>
   );

@@ -5,7 +5,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { sanitizeNextPath } from "@/lib/auth/paths";
-import { createClient } from "@/lib/supabase/client";
+import {
+  sendSignInOtpAction,
+  verifySignInOtpAction,
+} from "@/app/auth/actions";
 import {
   authEmailSchema,
   authOtpSchema,
@@ -39,39 +42,36 @@ export function AuthForm() {
   async function onSendCode(values: AuthEmailSchema) {
     setFormError(null);
     setStatusMessage(null);
-    const supabase = createClient();
-    const emailRedirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`;
 
-    const { error } = await supabase.auth.signInWithOtp({
+    const result = await sendSignInOtpAction({
       email: values.email,
-      options: {
-        shouldCreateUser: true,
-        emailRedirectTo,
-      },
+      origin: window.location.origin,
+      nextPath,
     });
 
-    if (error) {
-      setFormError(error.message);
+    if (!result.ok) {
+      setFormError(result.error);
       return;
     }
 
     setEmailForOtp(values.email);
     otpForm.setValue("email", values.email);
     setStep("otp");
-    setStatusMessage("Check your email for a sign-in code or magic link.");
+    setStatusMessage(
+      "Check your inbox and spam folder. Use the 6-digit code in the email, or click the sign-in link in the same message.",
+    );
   }
 
   async function onVerifyCode(values: AuthOtpSchema) {
     setFormError(null);
-    const supabase = createClient();
-    const { error } = await supabase.auth.verifyOtp({
+
+    const result = await verifySignInOtpAction({
       email: values.email,
       token: values.token,
-      type: "email",
     });
 
-    if (error) {
-      setFormError(error.message);
+    if (!result.ok) {
+      setFormError(result.error);
       return;
     }
 
@@ -81,6 +81,26 @@ export function AuthForm() {
 
   return (
     <div className="w-full max-w-md space-y-6">
+      {authError === "not_configured" && (
+        <p
+          className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900"
+          role="alert"
+        >
+          Sign-in is not configured on this server. Add Supabase env vars in
+          Vercel and redeploy, then set Supabase redirect URLs to this site&apos;s{" "}
+          <code className="text-xs">/auth/callback</code>.
+        </p>
+      )}
+
+      {authError === "callback_failed" && (
+        <p
+          className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900"
+          role="alert"
+        >
+          Sign-in link expired or was invalid. Request a new code and try again.
+        </p>
+      )}
+
       {authError === "admin_required" && (
         <p
           className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
@@ -120,6 +140,14 @@ export function AuthForm() {
           {formError && (
             <p className="text-sm text-red-600" role="alert">
               {formError}
+            </p>
+          )}
+          {formError?.toLowerCase().includes("rate limit") && (
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              Supabase limits how many auth emails a project can send per hour on
+              the default mailer (often after many test sign-ins). Wait about an
+              hour, then try once. For production, set up custom SMTP under
+              Supabase → Project Settings → Authentication → SMTP.
             </p>
           )}
           <button
@@ -171,6 +199,14 @@ export function AuthForm() {
           {formError && (
             <p className="text-sm text-red-600" role="alert">
               {formError}
+            </p>
+          )}
+          {formError?.toLowerCase().includes("rate limit") && (
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              Supabase limits how many auth emails a project can send per hour on
+              the default mailer (often after many test sign-ins). Wait about an
+              hour, then try once. For production, set up custom SMTP under
+              Supabase → Project Settings → Authentication → SMTP.
             </p>
           )}
           <button

@@ -8,6 +8,11 @@ import { requireUser } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
 
+export const metadata = {
+  title: "Dashboard | Perfect Placer",
+  description: "Candidate dashboard — profile, applications, and saved opportunities.",
+};
+
 export default async function DashboardLayout({
   children,
 }: {

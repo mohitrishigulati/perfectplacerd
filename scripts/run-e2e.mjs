@@ -28,7 +28,8 @@ async function main() {
 
   const supabaseUrl =
     process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://placeholder.supabase.co";
-  const anonKey =
+  const publicKey =
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsYWNlaG9sZGVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE2NDk5NTAzNzIsImV4cCI6MTk2NTUyNjM3Mn0.e2e-test-signature";
 
@@ -50,7 +51,8 @@ async function main() {
       env: {
         ...process.env,
         NEXT_PUBLIC_SUPABASE_URL: supabaseUrl,
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: anonKey,
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: publicKey,
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: publicKey,
       },
     });
 

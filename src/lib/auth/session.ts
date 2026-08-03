@@ -3,6 +3,7 @@ import "server-only";
 import { redirect } from "next/navigation";
 import { userIsAdmin } from "@/lib/auth/admin";
 import { AUTH_PATH, sanitizeNextPath } from "@/lib/auth/paths";
+import { isSupabasePublicEnvConfigured } from "@/lib/supabase/public-env";
 import { createClient } from "@/lib/supabase/server";
 
 export type SessionUser = {
@@ -11,6 +12,10 @@ export type SessionUser = {
 };
 
 export async function getSessionUser(): Promise<SessionUser | null> {
+  if (!isSupabasePublicEnvConfigured()) {
+    return null;
+  }
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -40,6 +45,9 @@ export async function requireUser(nextPath?: string): Promise<SessionUser> {
 
 export async function requireAdmin(nextPath?: string): Promise<SessionUser> {
   const user = await requireUser(nextPath);
+  if (!isSupabasePublicEnvConfigured()) {
+    redirect(`${AUTH_PATH}?error=admin_required`);
+  }
   const supabase = await createClient();
   const isAdmin = await userIsAdmin(supabase, user.id);
 
@@ -52,7 +60,7 @@ export async function requireAdmin(nextPath?: string): Promise<SessionUser> {
 
 export async function getIsAdmin(): Promise<boolean> {
   const user = await getSessionUser();
-  if (!user) {
+  if (!user || !isSupabasePublicEnvConfigured()) {
     return false;
   }
   const supabase = await createClient();
