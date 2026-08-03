@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { slug } = await params;
   const opportunity = await getOpportunityBySlug(slug);
   if (!opportunity) {
-    return { title: "Opportunity not found | Perfect Placer" };
+    return { title: "Opportunity not found" };
   }
   return createPublicMetadata({
     title: opportunity.title,

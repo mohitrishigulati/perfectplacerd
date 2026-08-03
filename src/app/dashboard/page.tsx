@@ -11,7 +11,7 @@ import {
 import { getDashboardOverview } from "@/lib/dashboard/queries";
 
 export const metadata = {
-  title: "Overview | Dashboard | Perfect Placer",
+  title: "Overview",
 };
 
 export default async function DashboardHomePage() {

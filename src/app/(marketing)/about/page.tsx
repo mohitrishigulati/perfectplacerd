@@ -3,7 +3,7 @@ import { BRAND, OFFICES } from "@/content/marketing";
 import { createPublicMetadata } from "@/lib/site/metadata";
 
 export const metadata = createPublicMetadata({
-  title: "About Perfect Placer",
+  title: "About",
   description:
     "Human resource consulting and executive search across India since 1992. Offices in Noida, Mumbai and Chennai.",
   path: "/about",

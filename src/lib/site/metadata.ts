@@ -9,20 +9,32 @@ type PublicMetadataInput = {
   path: string;
 };
 
+/** Document title with brand — for Open Graph / social, not the Next `title` field. */
+export function formatBrandedTitle(pageTitle: string): string {
+  const trimmed = pageTitle.trim();
+  if (!trimmed) {
+    return SITE_NAME;
+  }
+  if (trimmed.includes(SITE_NAME)) {
+    return trimmed;
+  }
+  return `${trimmed} | ${SITE_NAME}`;
+}
+
 export function createPublicMetadata({
   title,
   description,
   path,
 }: PublicMetadataInput): Metadata {
   const canonical = absoluteUrl(path);
-  const fullTitle = title.includes(SITE_NAME) ? title : `${title} | ${SITE_NAME}`;
+  const brandedTitle = formatBrandedTitle(title);
 
   return {
-    title: fullTitle,
+    title,
     description,
     alternates: { canonical },
     openGraph: {
-      title: fullTitle,
+      title: brandedTitle,
       description,
       url: canonical,
       siteName: SITE_NAME,
@@ -34,7 +46,7 @@ export function createPublicMetadata({
 
 export function createNoIndexMetadata(title: string): Metadata {
   return {
-    title: `${title} | ${SITE_NAME}`,
+    title,
     robots: { index: false, follow: false },
     metadataBase: new URL(getSiteUrl()),
   };
