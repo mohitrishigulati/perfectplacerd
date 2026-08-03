@@ -1,8 +1,18 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --pp-navy: #0c1a2e;
+  --pp-navy-deep: #070f1a;
+  --pp-navy-mid: #12243d;
+  --pp-gold: #c9a227;
+  --pp-gold-bright: #d4b03a;
+  --pp-gold-dark: #9a7b1a;
+  --pp-cream: #f7f5f0;
+  --pp-ink: #1a2332;
+  --pp-muted: #a8b4c4;
+  --pp-border: #d8dde6;
+  --background: var(--pp-cream);
+  --foreground: var(--pp-ink);
 }
 
 @theme inline {
@@ -12,34 +22,35 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Georgia, "Times New Roman", serif;
 }
 
 @layer components {
   .field-input {
-    @apply w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50;
+    @apply w-full rounded-lg border border-[var(--pp-border)] bg-white px-3 py-2 text-sm text-[var(--pp-ink)] shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--pp-gold)]/50;
   }
 
   .field-error {
-    @apply mt-1 text-sm text-red-600;
+    @apply mt-1 text-sm text-red-700;
   }
 
   .btn-primary {
-    @apply inline-flex items-center justify-center rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-zinc-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 disabled:opacity-60 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white;
+    @apply inline-flex items-center justify-center rounded-lg bg-[var(--pp-navy)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--pp-navy-mid)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pp-gold)] disabled:opacity-60;
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 disabled:opacity-60 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100;
+    @apply inline-flex items-center justify-center rounded-lg border border-[var(--pp-border)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--pp-ink)] hover:bg-[var(--pp-cream)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pp-gold)] disabled:opacity-60;
+  }
+
+  .btn-gold {
+    @apply inline-flex items-center justify-center rounded-lg bg-[var(--pp-gold)] px-5 py-2.5 text-sm font-semibold text-[var(--pp-navy)] hover:bg-[var(--pp-gold-bright)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pp-navy)];
+  }
+
+  .btn-outline-light {
+    @apply inline-flex items-center justify-center rounded-lg border border-white/30 px-5 py-2.5 text-sm font-medium text-white hover:bg-white/10;
   }
 
   .sr-only {

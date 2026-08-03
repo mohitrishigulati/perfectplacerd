@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { JobPostingJsonLd } from "@/components/seo/job-posting-json-ld";
 import { OpportunityActions } from "@/components/opportunities/opportunity-actions";
 import {
   APPLICATION_STATUS_LABELS,
@@ -12,6 +13,7 @@ import {
   getViewerOpportunityState,
 } from "@/lib/opportunities/queries";
 import { getSessionUser } from "@/lib/auth/session";
+import { createPublicMetadata } from "@/lib/site/metadata";
 
 export const dynamic = "force-dynamic";
 
@@ -25,10 +27,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!opportunity) {
     return { title: "Opportunity not found | Perfect Placer" };
   }
-  return {
-    title: `${opportunity.title} | Opportunities | Perfect Placer`,
+  return createPublicMetadata({
+    title: opportunity.title,
     description: opportunity.description.slice(0, 160),
-  };
+    path: `/opportunities/${slug}`,
+  });
 }
 
 export default async function OpportunityDetailPage({ params }: PageProps) {
@@ -42,7 +45,9 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
   const viewerState = await getViewerOpportunityState(opportunity.id, user?.id ?? null);
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+    <>
+      <JobPostingJsonLd opportunity={opportunity} />
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
       <article className="min-w-0">
         <Link
           href="/opportunities"
@@ -91,6 +96,7 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
           viewerState={viewerState}
         />
       </aside>
-    </div>
+      </div>
+    </>
   );
 }

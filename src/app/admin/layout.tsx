@@ -3,6 +3,10 @@ import { SignOutButton } from "@/components/auth/sign-out-button";
 import { AdminNav } from "@/components/admin/admin-nav";
 import { requireAdmin } from "@/lib/auth/session";
 
+import { createNoIndexMetadata } from "@/lib/site/metadata";
+
+export const metadata = createNoIndexMetadata("Staff admin");
+
 export const dynamic = "force-dynamic";
 
 export default async function AdminLayout({

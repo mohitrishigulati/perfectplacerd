@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { getSiteUrl } from "@/lib/site/url";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -13,8 +14,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Perfect Placer",
-  description: "Perfect Placer v2 application",
+  metadataBase: new URL(getSiteUrl()),
+  title: {
+    default: "Perfect Placer | Executive Search & HR Consulting",
+    template: "%s | Perfect Placer",
+  },
+  description:
+    "Executive search and HR consulting across India since 1992. Noida, Mumbai and Chennai.",
 };
 
 export default function RootLayout({

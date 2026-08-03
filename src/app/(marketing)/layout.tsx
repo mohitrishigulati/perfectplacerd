@@ -2,7 +2,7 @@ import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
 import { getSessionUser } from "@/lib/auth/session";
 
-export default async function OpportunitiesLayout({
+export default async function MarketingLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -10,9 +10,9 @@ export default async function OpportunitiesLayout({
   const user = await getSessionUser();
 
   return (
-    <div className="flex min-h-full flex-1 flex-col bg-[var(--pp-cream)]">
+    <div className="flex min-h-full flex-1 flex-col bg-[var(--pp-cream)] text-[var(--pp-ink)]">
       <SiteHeader userSignedIn={Boolean(user)} />
-      <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">{children}</div>
+      <main className="flex-1">{children}</main>
       <SiteFooter />
     </div>
   );

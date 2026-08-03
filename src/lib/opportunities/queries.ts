@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { logServerError } from "@/lib/logging/server-error";
 import {
   OPPORTUNITIES_PAGE_SIZE,
   type OpportunityFilters,
@@ -112,7 +113,8 @@ export async function searchOpportunities(
     if (filters.q) {
       return searchOpportunitiesKeywordFallback(filters, from, to);
     }
-    throw new Error(error.message);
+    logServerError("opportunities.search", error);
+    throw new Error("search_failed");
   }
 
   const total = count ?? 0;
@@ -162,7 +164,8 @@ async function searchOpportunitiesKeywordFallback(
 
   const { data, error, count } = await query.range(from, to);
   if (error) {
-    throw new Error(error.message);
+    logServerError("opportunities.searchFallback", error);
+    throw new Error("search_failed");
   }
 
   const total = count ?? 0;
@@ -189,7 +192,8 @@ export async function getOpportunityBySlug(
     .maybeSingle();
 
   if (error) {
-    throw new Error(error.message);
+    logServerError("opportunities.getBySlug", error);
+    return null;
   }
 
   return data;
