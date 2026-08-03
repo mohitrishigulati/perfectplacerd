@@ -11,6 +11,8 @@ import {
   adminJobFormSchema,
   applicationStatusSchema,
 } from "@/lib/validations/admin-job";
+import { logDbError, mapDbError } from "@/lib/errors/map-db-error";
+import { PUBLIC_GENERIC_ERROR } from "@/lib/errors/public-messages";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import type { JobStatus } from "@/types/database";
@@ -66,7 +68,8 @@ export async function createJobAction(input: unknown): Promise<AdminActionResult
     .single();
 
   if (error) {
-    return { ok: false, message: error.message };
+    logDbError("admin.createJob", error);
+    return { ok: false, message: mapDbError(error).message };
   }
 
   revalidateAdminJobs(data.id);
@@ -104,7 +107,8 @@ export async function updateJobAction(
     .eq("id", jobId);
 
   if (error) {
-    return { ok: false, message: error.message };
+    logDbError("admin.updateJob", error);
+    return { ok: false, message: mapDbError(error).message };
   }
 
   revalidateAdminJobs(jobId);
@@ -129,7 +133,8 @@ export async function setJobStatusAction(
     .maybeSingle();
 
   if (readError || !job) {
-    return { ok: false, message: readError?.message ?? "Job not found." };
+    logDbError("admin.setJobStatus.read", readError);
+    return { ok: false, message: "Opportunity not found." };
   }
 
   if (!canPerformJobStatusAction(job.status as JobStatus, action)) {
@@ -143,7 +148,8 @@ export async function setJobStatusAction(
     .eq("id", jobId);
 
   if (error) {
-    return { ok: false, message: error.message };
+    logDbError("admin.setJobStatus", error);
+    return { ok: false, message: mapDbError(error).message };
   }
 
   revalidateAdminJobs(jobId);
@@ -169,7 +175,8 @@ export async function updateApplicationStatusAction(input: {
     .eq("job_id", input.jobId);
 
   if (error) {
-    return { ok: false, message: error.message };
+    logDbError("admin.updateApplicationStatus", error);
+    return { ok: false, message: mapDbError(error).message };
   }
 
   revalidatePath(`/admin/jobs/${input.jobId}/applications`);
@@ -190,7 +197,8 @@ export async function createResumeDownloadUrlAction(
     .maybeSingle();
 
   if (error || !resume) {
-    return { ok: false, message: error?.message ?? "Resume not found." };
+    logDbError("admin.createResumeDownloadUrl.read", error);
+    return { ok: false, message: "Resume not found." };
   }
 
   const { data: signed, error: signError } = await supabase.storage
@@ -198,7 +206,8 @@ export async function createResumeDownloadUrlAction(
     .createSignedUrl(resume.storage_path, 120);
 
   if (signError || !signed?.signedUrl) {
-    return { ok: false, message: signError?.message ?? "Could not create download link." };
+    logDbError("admin.createResumeDownloadUrl.sign", signError);
+    return { ok: false, message: PUBLIC_GENERIC_ERROR };
   }
 
   return { ok: true, url: signed.signedUrl, message: resume.file_name ?? "Resume" };

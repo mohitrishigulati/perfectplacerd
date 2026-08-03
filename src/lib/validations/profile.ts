@@ -39,6 +39,13 @@ export const resumeUploadSchema = z.object({
   title: z.string().trim().min(1, "Resume title is required").max(120),
 });
 
+export const resumeRegisterSchema = resumeUploadSchema.extend({
+  storagePath: z.string().trim().min(1),
+  fileName: z.string().trim().min(1).max(255),
+  mimeType: z.string().trim().min(1).max(120),
+  byteSize: z.number().int().positive(),
+});
+
 export const deleteAccountSchema = z.object({
   confirm: z
     .string()

@@ -351,6 +351,10 @@ export interface Database {
         Args: { target_user_id: string };
         Returns: Json;
       };
+      withdraw_application: {
+        Args: { p_application_id: string };
+        Returns: undefined;
+      };
     };
     Enums: {
       job_status: JobStatus;

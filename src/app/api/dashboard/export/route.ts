@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
+import { logDbError } from "@/lib/errors/map-db-error";
+import { PUBLIC_GENERIC_ERROR } from "@/lib/errors/public-messages";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +18,8 @@ export async function GET() {
   });
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    logDbError("api.dashboard.export", error);
+    return NextResponse.json({ error: PUBLIC_GENERIC_ERROR }, { status: 500 });
   }
 
   const stamp = new Date().toISOString().slice(0, 10);

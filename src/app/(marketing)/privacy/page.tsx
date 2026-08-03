@@ -60,9 +60,11 @@ export default function PrivacyPage() {
         </p>
         <h2>Sharing and processors</h2>
         <p>
-          We do not sell personal data. We may use service providers (hosting,
-          email, infrastructure such as Vercel or Supabase) who process data on
-          our behalf under appropriate terms.
+          We do not sell personal data. Résumés you upload are stored securely
+          and may be accessed by authorized Perfect Placer recruiters to
+          evaluate applications. We may use service providers (hosting, email,
+          infrastructure such as Vercel or Supabase) who process data on our
+          behalf under appropriate terms.
         </p>
         <h2>Security</h2>
         <p>

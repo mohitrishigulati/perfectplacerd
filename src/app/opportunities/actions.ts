@@ -5,35 +5,33 @@ import { redirect } from "next/navigation";
 import { getApplyEligibility } from "@/lib/opportunities/apply";
 import { getSessionUser } from "@/lib/auth/session";
 import { authRedirectUrl } from "@/lib/auth/paths";
+import { sanitizeReturnPath } from "@/lib/auth/return-path";
 import { createClient } from "@/lib/supabase/server";
-import { headers } from "next/headers";
+import { getAuthCallbackOrigin } from "@/lib/site/url";
+import { logDbError, mapDbError } from "@/lib/errors/map-db-error";
 
 export type OpportunityActionResult =
   | { ok: true; message?: string }
   | { ok: false; message: string };
 
-async function getOrigin(): Promise<string> {
-  const headerStore = await headers();
-  const host = headerStore.get("x-forwarded-host") ?? headerStore.get("host");
-  const protocol = headerStore.get("x-forwarded-proto") ?? "http";
-  if (host) {
-    return `${protocol}://${host}`;
-  }
-  return "http://localhost:3000";
+function trustedAuthRedirect(nextPath: string): never {
+  const safePath = sanitizeReturnPath(nextPath, "/opportunities");
+  redirect(authRedirectUrl(safePath, getAuthCallbackOrigin()));
 }
 
 export async function saveOpportunityAction(
   jobId: string,
   returnPath: string,
 ): Promise<OpportunityActionResult> {
+  const safePath = sanitizeReturnPath(returnPath, "/opportunities");
   const user = await getSessionUser();
   if (!user) {
-    redirect(authRedirectUrl(returnPath, await getOrigin()));
+    trustedAuthRedirect(safePath);
   }
 
   const supabase = await createClient();
   const { error } = await supabase.from("saved_jobs").insert({
-    user_id: user.id,
+    user_id: user!.id,
     job_id: jobId,
   });
 
@@ -41,10 +39,11 @@ export async function saveOpportunityAction(
     if (error.code === "23505") {
       return { ok: true, message: "Already saved." };
     }
-    return { ok: false, message: error.message };
+    logDbError("opportunities.save", error);
+    return { ok: false, message: mapDbError(error).message };
   }
 
-  revalidatePath(returnPath);
+  revalidatePath(safePath);
   revalidatePath("/dashboard/saved");
   revalidatePath("/opportunities");
   return { ok: true, message: "Opportunity saved." };
@@ -54,23 +53,25 @@ export async function unsaveOpportunityAction(
   jobId: string,
   returnPath: string,
 ): Promise<OpportunityActionResult> {
+  const safePath = sanitizeReturnPath(returnPath, "/opportunities");
   const user = await getSessionUser();
   if (!user) {
-    redirect(authRedirectUrl(returnPath, await getOrigin()));
+    trustedAuthRedirect(safePath);
   }
 
   const supabase = await createClient();
   const { error } = await supabase
     .from("saved_jobs")
     .delete()
-    .eq("user_id", user.id)
+    .eq("user_id", user!.id)
     .eq("job_id", jobId);
 
   if (error) {
-    return { ok: false, message: error.message };
+    logDbError("opportunities.unsave", error);
+    return { ok: false, message: mapDbError(error).message };
   }
 
-  revalidatePath(returnPath);
+  revalidatePath(safePath);
   revalidatePath("/dashboard/saved");
   return { ok: true, message: "Removed from saved opportunities." };
 }
@@ -80,10 +81,13 @@ export async function applyToOpportunityAction(input: {
   slug: string;
   coverLetter?: string;
 }): Promise<OpportunityActionResult> {
-  const returnPath = `/opportunities/${input.slug}`;
+  const returnPath = sanitizeReturnPath(
+    `/opportunities/${input.slug}`,
+    "/opportunities",
+  );
   const user = await getSessionUser();
   if (!user) {
-    redirect(authRedirectUrl(returnPath, await getOrigin()));
+    trustedAuthRedirect(returnPath);
   }
 
   const supabase = await createClient();
@@ -98,13 +102,13 @@ export async function applyToOpportunityAction(input: {
     supabase
       .from("resumes")
       .select("id")
-      .eq("user_id", user.id)
+      .eq("user_id", user!.id)
       .eq("is_primary", true)
       .maybeSingle(),
     supabase
       .from("applications")
       .select("status")
-      .eq("candidate_id", user.id)
+      .eq("candidate_id", user!.id)
       .eq("job_id", input.jobId)
       .maybeSingle(),
   ]);
@@ -135,7 +139,7 @@ export async function applyToOpportunityAction(input: {
 
   const { error } = await supabase.from("applications").insert({
     job_id: input.jobId,
-    candidate_id: user.id,
+    candidate_id: user!.id,
     resume_id: resume!.id,
     cover_letter: input.coverLetter?.trim() || null,
     status: "submitted",
@@ -148,7 +152,8 @@ export async function applyToOpportunityAction(input: {
         message: "You have already applied to this opportunity.",
       };
     }
-    return { ok: false, message: error.message };
+    logDbError("opportunities.apply", error);
+    return { ok: false, message: mapDbError(error).message };
   }
 
   revalidatePath(returnPath);

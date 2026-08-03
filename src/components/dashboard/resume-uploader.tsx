@@ -44,7 +44,7 @@ export function ResumeUploader({ userId, resume }: Props) {
         });
 
       if (uploadError) {
-        throw new Error(uploadError.message);
+        throw new Error("Upload failed. Please try again.");
       }
 
       const result = await registerResumeAction({
@@ -56,6 +56,7 @@ export function ResumeUploader({ userId, resume }: Props) {
       });
 
       if (!result.ok) {
+        await supabase.storage.from("resumes").remove([objectPath]);
         throw new Error(result.message);
       }
 
@@ -78,7 +79,8 @@ export function ResumeUploader({ userId, resume }: Props) {
       </h2>
       <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
         PDF or Word documents up to 5&nbsp;MB. Files are stored in a private
-        bucket and only you can access them.
+        bucket and are accessible to you and authorized Perfect Placer
+        recruiters reviewing your applications.
       </p>
 
       {resume && (
