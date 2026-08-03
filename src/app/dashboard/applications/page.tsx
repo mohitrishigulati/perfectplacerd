@@ -12,7 +12,12 @@ export default async function DashboardApplicationsPage() {
         description="Track roles you've applied to and their current status."
         action={{ href: "/opportunities", label: "Browse opportunities" }}
       />
-      <ApplicationsList applications={applications} />
+      <ApplicationsList
+        key={applications
+          .map((application) => `${application.id}:${application.status}`)
+          .join("|")}
+        applications={applications}
+      />
     </div>
   );
 }
