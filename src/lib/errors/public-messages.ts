@@ -9,3 +9,6 @@ export const PUBLIC_SIGN_IN_UNAVAILABLE =
 
 export const PUBLIC_GENERIC_ERROR =
   "Something went wrong. Please try again.";
+
+export const PUBLIC_OTP_RATE_LIMIT =
+  "Too many sign-in attempts. Please wait before requesting another code.";

@@ -1,5 +1,6 @@
 import {
   PUBLIC_GENERIC_ERROR,
+  PUBLIC_OTP_RATE_LIMIT,
   PUBLIC_SIGN_IN_UNAVAILABLE,
 } from "@/lib/errors/public-messages";
 
@@ -11,22 +12,39 @@ export type AuthErrorKind =
   | "not_configured"
   | "generic";
 
-export function mapAuthError(raw: string | undefined): {
+const PROVIDER_LEAK_PATTERN =
+  /supabase|smtp|resend|gotrue|postgres|api key|service role/i;
+
+export function isRateLimitedAuthError(
+  raw: string | undefined,
+  status?: number,
+): boolean {
+  const text = (raw ?? "").toLowerCase();
+  if (status === 429) {
+    return true;
+  }
+  return (
+    text.includes("over_email_send_rate_limit") ||
+    text.includes("email rate limit") ||
+    text.includes("rate limit exceeded")
+  );
+}
+
+export function mapAuthError(
+  raw: string | undefined,
+  status?: number,
+): {
   message: string;
   kind: AuthErrorKind;
 } {
   const text = (raw ?? "").toLowerCase();
 
-  if (!text) {
+  if (!text && status !== 429) {
     return { message: PUBLIC_GENERIC_ERROR, kind: "generic" };
   }
 
-  if (text.includes("rate limit")) {
-    return {
-      message:
-        "Too many sign-in emails were sent. Wait about an hour, then try again—or configure custom SMTP in Supabase for production volume.",
-      kind: "rate_limit",
-    };
+  if (isRateLimitedAuthError(raw, status)) {
+    return { message: PUBLIC_OTP_RATE_LIMIT, kind: "rate_limit" };
   }
 
   if (text.includes("invalid") && text.includes("email")) {
@@ -64,4 +82,11 @@ export function mapAuthError(raw: string | undefined): {
   }
 
   return { message: PUBLIC_GENERIC_ERROR, kind: "generic" };
+}
+
+/** Ensures mapped messages never expose infrastructure details to end users. */
+export function assertPublicAuthMessage(message: string): void {
+  if (PROVIDER_LEAK_PATTERN.test(message)) {
+    throw new Error("Public auth message must not mention provider infrastructure.");
+  }
 }

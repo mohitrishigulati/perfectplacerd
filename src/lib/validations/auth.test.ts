@@ -11,13 +11,21 @@ describe("auth validation schemas", () => {
     );
   });
 
-  it("validates otp token length", () => {
+  it("validates six-digit otp token", () => {
     expect(
       authOtpSchema.safeParse({ email: "user@example.com", token: "123456" })
         .success,
     ).toBe(true);
     expect(
+      authOtpSchema.safeParse({ email: "user@example.com", token: "12345" })
+        .success,
+    ).toBe(false);
+    expect(
       authOtpSchema.safeParse({ email: "user@example.com", token: "12" }).success,
+    ).toBe(false);
+    expect(
+      authOtpSchema.safeParse({ email: "user@example.com", token: "1234567" })
+        .success,
     ).toBe(false);
   });
 });

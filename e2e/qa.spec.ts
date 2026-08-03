@@ -47,6 +47,23 @@ test.describe("authentication", () => {
     ).toBeVisible();
   });
 
+  test("send button stays disabled during cooldown without sending email", async ({
+    page,
+  }) => {
+    await page.goto("/auth");
+    await page.evaluate(() => {
+      sessionStorage.setItem(
+        "pp.auth.otpSendCooldownUntil",
+        String(Date.now() + 60_000),
+      );
+    });
+    await page.reload();
+    const sendButton = page.getByRole("button", {
+      name: /send again in \d+ seconds/i,
+    });
+    await expect(sendButton).toBeDisabled();
+  });
+
   test("protected candidate routes redirect guests to auth", async ({ page }) => {
     await page.goto("/dashboard/profile");
     await expect(page).toHaveURL(/\/auth\?next=%2Fdashboard%2Fprofile/);

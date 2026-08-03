@@ -9,8 +9,7 @@ export const authOtpSchema = z.object({
   token: z
     .string()
     .trim()
-    .min(6, "Enter the 6-digit code from your email")
-    .max(8, "Enter the code from your email"),
+    .regex(/^\d{6}$/, "Enter the 6-digit code from your email"),
 });
 
 export type AuthEmailSchema = z.infer<typeof authEmailSchema>;

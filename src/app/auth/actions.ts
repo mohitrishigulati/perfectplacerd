@@ -3,7 +3,7 @@
 import { buildSignInEmailRedirectTo } from "@/lib/auth/sign-in-redirect";
 import { mapAuthError } from "@/lib/errors/map-auth-error";
 import { PUBLIC_SIGN_IN_UNAVAILABLE } from "@/lib/errors/public-messages";
-import { logServerError } from "@/lib/logging/server-error";
+import { logAuthErrorCategory } from "@/lib/logging/server-error";
 import { isSupabasePublicEnvConfigured } from "@/lib/supabase/public-env";
 import { createClient } from "@/lib/supabase/server";
 import { authEmailSchema, authOtpSchema } from "@/lib/validations/auth";
@@ -26,7 +26,7 @@ export async function sendSignInOtpAction(input: {
   }
 
   if (!isSupabasePublicEnvConfigured()) {
-    logServerError("auth.sendOtp", new Error("Supabase not configured"));
+    logAuthErrorCategory("auth.sendOtp", "not_configured");
     return {
       ok: false,
       error: PUBLIC_SIGN_IN_UNAVAILABLE,
@@ -47,14 +47,21 @@ export async function sendSignInOtpAction(input: {
     });
 
     if (error) {
-      logServerError("auth.sendOtp", error);
-      const mapped = mapAuthError(error.message);
+      const status =
+        typeof error === "object" &&
+        error !== null &&
+        "status" in error &&
+        typeof (error as { status: unknown }).status === "number"
+          ? (error as { status: number }).status
+          : undefined;
+      const mapped = mapAuthError(error.message, status);
+      logAuthErrorCategory("auth.sendOtp", mapped.kind);
       return { ok: false, error: mapped.message, kind: mapped.kind };
     }
 
     return { ok: true };
-  } catch (error) {
-    logServerError("auth.sendOtp", error);
+  } catch {
+    logAuthErrorCategory("auth.sendOtp", "provider");
     return {
       ok: false,
       error: PUBLIC_SIGN_IN_UNAVAILABLE,
@@ -77,7 +84,7 @@ export async function verifySignInOtpAction(input: {
   }
 
   if (!isSupabasePublicEnvConfigured()) {
-    logServerError("auth.verifyOtp", new Error("Supabase not configured"));
+    logAuthErrorCategory("auth.verifyOtp", "not_configured");
     return {
       ok: false,
       error: PUBLIC_SIGN_IN_UNAVAILABLE,
@@ -94,14 +101,21 @@ export async function verifySignInOtpAction(input: {
     });
 
     if (error) {
-      logServerError("auth.verifyOtp", error);
-      const mapped = mapAuthError(error.message);
+      const status =
+        typeof error === "object" &&
+        error !== null &&
+        "status" in error &&
+        typeof (error as { status: unknown }).status === "number"
+          ? (error as { status: number }).status
+          : undefined;
+      const mapped = mapAuthError(error.message, status);
+      logAuthErrorCategory("auth.verifyOtp", mapped.kind);
       return { ok: false, error: mapped.message, kind: mapped.kind };
     }
 
     return { ok: true };
-  } catch (error) {
-    logServerError("auth.verifyOtp", error);
+  } catch {
+    logAuthErrorCategory("auth.verifyOtp", "provider");
     return {
       ok: false,
       error: PUBLIC_SIGN_IN_UNAVAILABLE,
