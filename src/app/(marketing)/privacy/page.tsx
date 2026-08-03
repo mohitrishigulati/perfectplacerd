@@ -53,6 +53,34 @@ export default function PrivacyPage() {
           or withdrawal of consent. Send requests to{" "}
           <a href={`mailto:${BRAND.email}`}>{BRAND.email}</a>.
         </p>
+        <h2>Resume upload and profile suggestions</h2>
+        <p>
+          When you upload a résumé and give consent on the resume page, we
+          process the file to suggest profile fields (such as contact details,
+          skills, or summary text). Suggestions are shown for your review; we do
+          not update your profile automatically without your confirmation.
+        </p>
+        <ul>
+          <li>
+            Supported formats: PDF, Word (DOC/DOCX), and JPEG/PNG images up to
+            10&nbsp;MB.
+          </li>
+          <li>
+            Files are stored in a private bucket. Structured suggestions and
+            confidence scores are stored separately; we do not store raw
+            third-party AI responses in your account.
+          </li>
+          <li>
+            Résumé files linked to submitted applications remain available for
+            recruitment review according to our application retention practices,
+            even if you upload a newer primary résumé later.
+          </li>
+          <li>
+            When you delete your account, unreferenced résumé files and parsing
+            metadata are removed; files still tied to applications may be
+            retained as needed for recruitment records.
+          </li>
+        </ul>
         <h2>Retention</h2>
         <p>
           Candidate profiles and résumés are retained while relevant for

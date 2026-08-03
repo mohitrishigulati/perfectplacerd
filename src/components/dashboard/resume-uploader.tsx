@@ -3,37 +3,77 @@
 import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
 import { registerResumeAction } from "@/app/dashboard/actions";
+import { parseResumeAction } from "@/app/dashboard/resume-actions";
 import { createClient } from "@/lib/supabase/client";
+import { buildResumeStorageObjectPath } from "@/lib/resumes/safe-filename";
 import type { PrimaryResume } from "@/lib/dashboard/queries";
 
 const ACCEPT =
-  ".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  ".pdf,.doc,.docx,.jpg,.jpeg,.png,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png";
+
+type UploadStage =
+  | "idle"
+  | "uploading"
+  | "registering"
+  | "reading"
+  | "preparing"
+  | "done"
+  | "error";
 
 type Props = {
   userId: string;
   resume: PrimaryResume | null;
 };
 
+function stageMessage(stage: UploadStage): string | null {
+  switch (stage) {
+    case "uploading":
+      return "Uploading…";
+    case "registering":
+      return "Securing your file…";
+    case "reading":
+      return "Reading resume…";
+    case "preparing":
+      return "Preparing suggestions…";
+    case "done":
+      return "Ready for review.";
+    default:
+      return null;
+  }
+}
+
 export function ResumeUploader({ userId, resume }: Props) {
   const inputId = useId();
+  const consentId = useId();
   const router = useRouter();
   const [title, setTitle] = useState(resume?.title ?? "Primary resume");
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
+  const [stage, setStage] = useState<UploadStage>("idle");
+  const [consent, setConsent] = useState(false);
 
   async function onFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
 
-    setUploading(true);
+    if (!consent) {
+      setError(
+        "Please confirm resume processing consent before uploading.",
+      );
+      return;
+    }
+
+    setStage("uploading");
     setError(null);
     setMessage(null);
 
+    const objectId = crypto.randomUUID();
+    const objectPath = buildResumeStorageObjectPath(userId, objectId, file.name);
+
+    let failed = false;
     try {
       const supabase = createClient();
-      const objectPath = `${userId}/${crypto.randomUUID()}/${file.name}`;
 
       const { error: uploadError } = await supabase.storage
         .from("resumes")
@@ -47,6 +87,7 @@ export function ResumeUploader({ userId, resume }: Props) {
         throw new Error("Upload failed. Please try again.");
       }
 
+      setStage("registering");
       const result = await registerResumeAction({
         title: title.trim() || "Primary resume",
         storagePath: objectPath,
@@ -60,14 +101,34 @@ export function ResumeUploader({ userId, resume }: Props) {
         throw new Error(result.message);
       }
 
-      setMessage(result.message ?? "Resume uploaded.");
+      if (result.resumeId) {
+        setStage("reading");
+        const parseResult = await parseResumeAction(result.resumeId);
+        setStage("preparing");
+        if (!parseResult.ok) {
+          setMessage(parseResult.message);
+        } else {
+          setStage("done");
+          setMessage(stageMessage("done"));
+        }
+      } else {
+        setStage("done");
+        setMessage(result.message ?? "Resume uploaded.");
+      }
+
       router.refresh();
     } catch (err) {
+      failed = true;
+      setStage("error");
       setError(err instanceof Error ? err.message : "Upload failed");
     } finally {
-      setUploading(false);
+      if (!failed) {
+        setStage("idle");
+      }
     }
   }
+
+  const progress = stageMessage(stage);
 
   return (
     <section
@@ -78,9 +139,8 @@ export function ResumeUploader({ userId, resume }: Props) {
         Private resume
       </h2>
       <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-        PDF or Word documents up to 5&nbsp;MB. Files are stored in a private
-        bucket and are accessible to you and authorized Perfect Placer
-        recruiters reviewing your applications.
+        PDF, Word, or JPEG/PNG up to 10&nbsp;MB. Files stay in a private bucket
+        accessible to you and authorized recruiters reviewing your applications.
       </p>
 
       {resume && (
@@ -111,6 +171,24 @@ export function ResumeUploader({ userId, resume }: Props) {
           />
         </div>
 
+        <label htmlFor={consentId} className="flex items-start gap-2 text-sm">
+          <input
+            id={consentId}
+            type="checkbox"
+            checked={consent}
+            onChange={(event) => setConsent(event.target.checked)}
+            className="mt-1"
+          />
+          <span>
+            I agree that Perfect Placer may process this resume to suggest profile
+            information. See our{" "}
+            <a href="/privacy" className="underline">
+              Privacy Policy
+            </a>{" "}
+            for retention and deletion details.
+          </span>
+        </label>
+
         <div>
           <label htmlFor={inputId} className="text-sm font-medium">
             {resume ? "Replace resume file" : "Upload resume file"}
@@ -121,14 +199,19 @@ export function ResumeUploader({ userId, resume }: Props) {
             accept={ACCEPT}
             className="mt-2 block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-zinc-900 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-zinc-800 dark:file:bg-zinc-100 dark:file:text-zinc-900"
             onChange={onFileChange}
-            disabled={uploading}
+            disabled={
+              stage === "uploading" ||
+              stage === "registering" ||
+              stage === "reading" ||
+              stage === "preparing"
+            }
           />
         </div>
       </div>
 
-      {uploading && (
-        <p className="mt-3 text-sm text-zinc-600" role="status">
-          Uploading securely…
+      {progress && (
+        <p className="mt-3 text-sm text-zinc-600" role="status" aria-live="polite">
+          {progress}
         </p>
       )}
       {error && (

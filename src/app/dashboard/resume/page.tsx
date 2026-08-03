@@ -1,20 +1,25 @@
 import { DashboardPageHeader } from "@/components/dashboard/dashboard-page-header";
+import { ResumeSuggestionsReview } from "@/components/dashboard/resume-suggestions-review";
 import { ResumeUploader } from "@/components/dashboard/resume-uploader";
-import { getPrimaryResume } from "@/lib/dashboard/queries";
+import { getDashboardProfile, getPrimaryResume } from "@/lib/dashboard/queries";
 import { requireUser } from "@/lib/auth/session";
 
 export default async function DashboardResumePage() {
   const user = await requireUser("/dashboard/resume");
-  const resume = await getPrimaryResume();
+  const [resume, profile] = await Promise.all([
+    getPrimaryResume(),
+    getDashboardProfile(),
+  ]);
 
   return (
     <div className="space-y-6">
       <DashboardPageHeader
         title="Resume"
-        description="Keep a private primary resume on file. Uploading a new file replaces the previous one."
+        description="Upload a private primary resume. Review suggested profile fields before applying them."
         action={{ href: "/dashboard/profile", label: "Edit profile" }}
       />
       <ResumeUploader userId={user.id} resume={resume} />
+      {resume ? <ResumeSuggestionsReview resume={resume} profile={profile} /> : null}
     </div>
   );
 }

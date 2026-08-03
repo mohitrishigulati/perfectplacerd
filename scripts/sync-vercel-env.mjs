@@ -9,6 +9,9 @@ const KEYS = [
   "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
   "NEXT_PUBLIC_SITE_URL",
 ];
+const STATIC_SERVER_VARS = {
+  RESUME_EXTRACTION_PROVIDER: "heuristic",
+};
 const TARGETS = ["production", "preview", "development"];
 
 function parseEnvFile(filePath) {
@@ -57,6 +60,9 @@ for (const key of KEYS) {
 for (const target of TARGETS) {
   for (const key of KEYS) {
     syncVar(key, env[key], target);
+  }
+  for (const [key, value] of Object.entries(STATIC_SERVER_VARS)) {
+    syncVar(key, value, target);
   }
 }
 

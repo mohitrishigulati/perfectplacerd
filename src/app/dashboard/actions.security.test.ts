@@ -32,10 +32,26 @@ vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
 }));
 
+vi.mock("@/lib/resumes/rate-limit", () => ({
+  isResumeProcessingRateLimited: vi.fn(async () => false),
+  recordResumeProcessingEvent: vi.fn(async () => {}),
+  MAX_RESUME_UPLOADS_PER_HOUR: 15,
+  MAX_RESUME_PARSES_PER_HOUR: 20,
+}));
+
 import {
   registerResumeAction,
   withdrawApplicationAction,
 } from "@/app/dashboard/actions";
+
+const VALID_OBJECT_ID = "22222222-2222-4222-8222-222222222222";
+
+function pdfBlob(): Blob {
+  const bytes = new TextEncoder().encode(
+    "%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF\n",
+  );
+  return new Blob([bytes]);
+}
 
 describe("dashboard application security actions", () => {
   beforeEach(() => {
@@ -43,7 +59,7 @@ describe("dashboard application security actions", () => {
     storageRemoveMock.mockResolvedValue({ error: null });
     storageFromMock.mockReturnValue({
       download: async () => ({
-        data: new Blob(["x".repeat(100)]),
+        data: pdfBlob(),
         error: null,
       }),
       remove: storageRemoveMock,
@@ -91,7 +107,7 @@ describe("dashboard application security actions", () => {
       };
     });
 
-    const storagePath = `${USER_ID}/new-id/file.pdf`;
+    const storagePath = `${USER_ID}/${VALID_OBJECT_ID}/file.pdf`;
 
     const result = await registerResumeAction({
       title: "Primary resume",

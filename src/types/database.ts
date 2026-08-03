@@ -28,6 +28,12 @@ export type AdminRole = "admin" | "super_admin";
 
 export type ProfileVisibility = "private" | "recruiters" | "public";
 
+export type ResumeParsingStatus =
+  | "pending"
+  | "processing"
+  | "completed"
+  | "failed";
+
 export type Json =
   | string
   | number
@@ -179,6 +185,11 @@ export interface Database {
           byte_size: number | null;
           is_primary: boolean;
           parsed_data: Json;
+          parsing_status: ResumeParsingStatus;
+          parsing_error_category: string | null;
+          extracted_data: Json;
+          extraction_confidence: Json;
+          parsed_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -192,6 +203,11 @@ export interface Database {
           byte_size?: number | null;
           is_primary?: boolean;
           parsed_data?: Json;
+          parsing_status?: ResumeParsingStatus;
+          parsing_error_category?: string | null;
+          extracted_data?: Json;
+          extraction_confidence?: Json;
+          parsed_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -205,8 +221,37 @@ export interface Database {
           byte_size?: number | null;
           is_primary?: boolean;
           parsed_data?: Json;
+          parsing_status?: ResumeParsingStatus;
+          parsing_error_category?: string | null;
+          extracted_data?: Json;
+          extraction_confidence?: Json;
+          parsed_at?: string | null;
           created_at?: string;
           updated_at?: string;
+        };
+        Relationships: [];
+      };
+      resume_processing_events: {
+        Row: {
+          id: string;
+          user_id: string;
+          event_type: "upload" | "parse";
+          resume_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          event_type: "upload" | "parse";
+          resume_id?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          event_type?: "upload" | "parse";
+          resume_id?: string | null;
+          created_at?: string;
         };
         Relationships: [];
       };

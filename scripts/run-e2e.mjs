@@ -24,6 +24,7 @@ async function main() {
   const port = await getFreePort();
   process.env.PLAYWRIGHT_PORT = String(port);
 
+  execSync("node scripts/generate-e2e-resume-fixtures.mjs", { stdio: "inherit" });
   execSync("npm run build", { stdio: "inherit" });
 
   const supabaseUrl =
@@ -53,6 +54,7 @@ async function main() {
         NEXT_PUBLIC_SUPABASE_URL: supabaseUrl,
         NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: publicKey,
         NEXT_PUBLIC_SUPABASE_ANON_KEY: publicKey,
+        RESUME_EXTRACTION_PROVIDER: "heuristic",
       },
     });
 
@@ -83,6 +85,7 @@ async function main() {
         PLAYWRIGHT_PORT: String(port),
         PLAYWRIGHT_SKIP_WEBSERVER: "1",
         CI: process.env.CI ?? "1",
+        RESUME_EXTRACTION_PROVIDER: "heuristic",
       },
     });
   } finally {

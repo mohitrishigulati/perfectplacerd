@@ -225,6 +225,11 @@ export type PrimaryResume = {
   mime_type: string | null;
   byte_size: number | null;
   updated_at: string;
+  parsing_status: import("@/types/database").ResumeParsingStatus;
+  parsing_error_category: string | null;
+  extracted_data: Record<string, unknown>;
+  extraction_confidence: Record<string, number>;
+  parsed_at: string | null;
 };
 
 export async function getPrimaryResume(): Promise<PrimaryResume | null> {
@@ -232,12 +237,25 @@ export async function getPrimaryResume(): Promise<PrimaryResume | null> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("resumes")
-    .select("id, title, file_name, mime_type, byte_size, updated_at")
+    .select(
+      "id, title, file_name, mime_type, byte_size, updated_at, parsing_status, parsing_error_category, extracted_data, extraction_confidence, parsed_at",
+    )
     .eq("user_id", user.id)
     .eq("is_primary", true)
     .maybeSingle();
 
-  return data;
+  if (!data) {
+    return null;
+  }
+
+  return {
+    ...data,
+    extracted_data: (data.extracted_data ?? {}) as Record<string, unknown>,
+    extraction_confidence: (data.extraction_confidence ?? {}) as Record<
+      string,
+      number
+    >,
+  };
 }
 
 export type ApplicationRow = {

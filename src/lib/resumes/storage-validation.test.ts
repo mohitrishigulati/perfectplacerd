@@ -1,39 +1,71 @@
 import { describe, expect, it } from "vitest";
 import {
-  isAllowedResumeMimeType,
-  isResumeStoragePathOwnedByUser,
   MAX_RESUME_BYTES,
+  validateResumeFileContent,
 } from "@/lib/resumes/storage-validation";
 
-describe("resume storage validation", () => {
-  const userId = "11111111-1111-1111-1111-111111111111";
+const MIN_PDF = new TextEncoder().encode(
+  "%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF\n",
+);
 
-  it("accepts paths under the user folder", () => {
-    expect(
-      isResumeStoragePathOwnedByUser(
-        `${userId}/abc/file.pdf`,
-        userId,
-      ),
-    ).toBe(true);
+describe("resume file validation", () => {
+  it("accepts valid pdf with matching mime and extension", () => {
+    const result = validateResumeFileContent(
+      MIN_PDF,
+      "application/pdf",
+      "resume.pdf",
+    );
+    expect(result.ok).toBe(true);
   });
 
-  it("rejects path traversal and other users' prefixes", () => {
-    expect(
-      isResumeStoragePathOwnedByUser(`${userId}/../other/file.pdf`, userId),
-    ).toBe(false);
-    expect(
-      isResumeStoragePathOwnedByUser(
-        "22222222-2222-2222-2222-222222222222/file.pdf",
-        userId,
-      ),
-    ).toBe(false);
+  it("rejects files over 10 MB", () => {
+    const huge = new Uint8Array(MAX_RESUME_BYTES + 1);
+    huge.set(MIN_PDF.slice(0, 5));
+    const result = validateResumeFileContent(
+      huge,
+      "application/pdf",
+      "resume.pdf",
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.reason).toBe("size");
+    }
   });
 
-  it("allows standard resume MIME types", () => {
-    expect(isAllowedResumeMimeType("application/pdf")).toBe(true);
+  it("rejects unsupported extensions", () => {
+    const result = validateResumeFileContent(
+      MIN_PDF,
+      "application/pdf",
+      "resume.exe",
+    );
+    expect(result.ok).toBe(false);
   });
 
-  it("defines 5 MB max", () => {
-    expect(MAX_RESUME_BYTES).toBe(5 * 1024 * 1024);
+  it("rejects mime and extension mismatch", () => {
+    const result = validateResumeFileContent(
+      MIN_PDF,
+      "image/png",
+      "resume.pdf",
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.reason).toBe("mismatch");
+    }
+  });
+
+  it("rejects zip archives masquerading as pdf", () => {
+    const zip = new TextEncoder().encode("PK\x03\x04fake");
+    const result = validateResumeFileContent(
+      zip,
+      "application/pdf",
+      "resume.pdf",
+    );
+    expect(result.ok).toBe(false);
+  });
+
+  it("rejects svg content for png uploads", () => {
+    const svg = new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg"></svg>');
+    const result = validateResumeFileContent(svg, "image/png", "scan.png");
+    expect(result.ok).toBe(false);
   });
 });

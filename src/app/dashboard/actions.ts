@@ -15,10 +15,17 @@ import { logDbError, mapDbError } from "@/lib/errors/map-db-error";
 import { PUBLIC_GENERIC_ERROR } from "@/lib/errors/public-messages";
 import {
   isAllowedResumeFileName,
-  isAllowedResumeMimeType,
   isResumeStoragePathOwnedByUser,
   MAX_RESUME_BYTES,
+  RESUME_UPLOAD_REJECT_MESSAGE,
+  validateResumeFileContent,
 } from "@/lib/resumes/storage-validation";
+import {
+  isResumeProcessingRateLimited,
+  MAX_RESUME_UPLOADS_PER_HOUR,
+  recordResumeProcessingEvent,
+} from "@/lib/resumes/rate-limit";
+import { parseResumeStoragePath } from "@/lib/resumes/safe-filename";
 
 const DASHBOARD_PATHS = [
   "/dashboard",
@@ -101,15 +108,23 @@ export async function registerResumeAction(input: {
     return { ok: false, message: "Invalid resume file location." };
   }
 
+  const parsedPath = parseResumeStoragePath(payload.storagePath);
+  if (!parsedPath) {
+    await removeOrphanResumeObject(
+      await createClient(),
+      payload.storagePath,
+    );
+    return { ok: false, message: "Invalid resume file location." };
+  }
+
   if (
-    !isAllowedResumeMimeType(payload.mimeType) ||
     !isAllowedResumeFileName(payload.fileName)
   ) {
     await removeOrphanResumeObject(
       await createClient(),
       payload.storagePath,
     );
-    return { ok: false, message: "Only PDF or Word resumes up to 5 MB are allowed." };
+    return { ok: false, message: RESUME_UPLOAD_REJECT_MESSAGE };
   }
 
   if (payload.byteSize > MAX_RESUME_BYTES) {
@@ -117,10 +132,25 @@ export async function registerResumeAction(input: {
       await createClient(),
       payload.storagePath,
     );
-    return { ok: false, message: "Only PDF or Word resumes up to 5 MB are allowed." };
+    return { ok: false, message: RESUME_UPLOAD_REJECT_MESSAGE };
   }
 
   const supabase = await createClient();
+
+  if (
+    await isResumeProcessingRateLimited(
+      supabase,
+      user.id,
+      "upload",
+      MAX_RESUME_UPLOADS_PER_HOUR,
+    )
+  ) {
+    await removeOrphanResumeObject(supabase, payload.storagePath);
+    return {
+      ok: false,
+      message: "Too many resume uploads. Please try again later.",
+    };
+  }
 
   const { data: blob, error: downloadError } = await supabase.storage
     .from("resumes")
@@ -133,12 +163,24 @@ export async function registerResumeAction(input: {
 
   if (blob.size > MAX_RESUME_BYTES) {
     await removeOrphanResumeObject(supabase, payload.storagePath);
-    return { ok: false, message: "Only PDF or Word resumes up to 5 MB are allowed." };
+    return { ok: false, message: RESUME_UPLOAD_REJECT_MESSAGE };
   }
 
   if (Math.abs(blob.size - payload.byteSize) > 1024) {
     await removeOrphanResumeObject(supabase, payload.storagePath);
     return { ok: false, message: "Uploaded file could not be verified." };
+  }
+
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  const validation = validateResumeFileContent(
+    bytes,
+    payload.mimeType,
+    payload.fileName,
+  );
+
+  if (!validation.ok) {
+    await removeOrphanResumeObject(supabase, payload.storagePath);
+    return { ok: false, message: validation.message };
   }
 
   const { data: inserted, error } = await supabase
@@ -151,6 +193,7 @@ export async function registerResumeAction(input: {
       mime_type: payload.mimeType,
       byte_size: blob.size,
       is_primary: true,
+      parsing_status: "pending",
     })
     .select("id")
     .single();
@@ -172,8 +215,14 @@ export async function registerResumeAction(input: {
     logDbError("dashboard.registerResume.demotePrimary", demoteError);
   }
 
+  await recordResumeProcessingEvent(supabase, user.id, "upload", inserted.id);
+
   revalidateDashboard();
-  return { ok: true, message: "Resume updated.", resumeId: inserted.id };
+  return {
+    ok: true,
+    message: "Resume uploaded.",
+    resumeId: inserted.id,
+  };
 }
 
 export async function withdrawApplicationAction(
@@ -255,13 +304,28 @@ export async function deleteAccountAction(input: unknown): Promise<ActionResult>
 
   const { data: resumes } = await supabase
     .from("resumes")
-    .select("storage_path")
+    .select("id, storage_path")
     .eq("user_id", user.id);
 
-  if (resumes?.length) {
-    await supabase.storage
-      .from("resumes")
-      .remove(resumes.map((r) => r.storage_path));
+  const { data: referencedRows } = await supabase
+    .from("applications")
+    .select("resume_id")
+    .eq("candidate_id", user.id)
+    .not("resume_id", "is", null);
+
+  const referencedIds = new Set(
+    (referencedRows ?? [])
+      .map((row) => row.resume_id)
+      .filter((id): id is string => Boolean(id)),
+  );
+
+  const unreferencedPaths =
+    resumes
+      ?.filter((resume) => !referencedIds.has(resume.id))
+      .map((resume) => resume.storage_path) ?? [];
+
+  if (unreferencedPaths.length) {
+    await supabase.storage.from("resumes").remove(unreferencedPaths);
   }
 
   const service = createServiceRoleClient();
