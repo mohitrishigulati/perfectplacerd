@@ -11,4 +11,4 @@ export const PUBLIC_GENERIC_ERROR =
   "Something went wrong. Please try again.";
 
 export const PUBLIC_OTP_RATE_LIMIT =
-  "Too many sign-in attempts. Please wait before requesting another code.";
+  "Too many sign-in attempts. If you already received a six-digit code or magic link, use that instead. Otherwise wait about an hour, then request one new code.";
