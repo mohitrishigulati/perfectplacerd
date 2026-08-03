@@ -1,8 +1,10 @@
-import { describe, expect, it, beforeAll } from "vitest";
+import { describe, expect, it, beforeAll, vi } from "vitest";
 import { execSync } from "node:child_process";
 import { runSyntheticResumeChecks } from "@/lib/resumes/e2e-synthetic-checks";
 import fs from "node:fs";
 import path from "node:path";
+
+vi.mock("server-only", () => ({}));
 
 describe("synthetic resume e2e checks", () => {
   beforeAll(() => {

@@ -22,7 +22,10 @@ async function extractDocxText(bytes: Uint8Array): Promise<string> {
   return normalizeResumeText(result.value ?? "");
 }
 
-async function extractImageTextWithOcr(bytes: Uint8Array): Promise<string> {
+async function extractImageTextWithOcr(
+  bytes: Uint8Array,
+  kind: "jpeg" | "png",
+): Promise<string> {
   if (!isResumeOcrConfigured()) {
     return "";
   }
@@ -33,6 +36,7 @@ async function extractImageTextWithOcr(bytes: Uint8Array): Promise<string> {
   }
 
   const base64 = Buffer.from(bytes).toString("base64");
+  const mediaType = kind === "png" ? "image/png" : "image/jpeg";
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -58,13 +62,14 @@ async function extractImageTextWithOcr(bytes: Uint8Array): Promise<string> {
             {
               type: "image_url",
               image_url: {
-                url: `data:application/octet-stream;base64,${base64}`,
+                url: `data:${mediaType};base64,${base64}`,
               },
             },
           ],
         },
       ],
     }),
+    signal: AbortSignal.timeout(30_000),
   });
 
   if (!response.ok) {
@@ -86,20 +91,13 @@ export async function extractResumeTextFromBytes(
     if (kind === "pdf") {
       const text = await extractPdfText(bytes);
       if (!isTextSufficientForStructuring(text)) {
-        if (isResumeOcrConfigured()) {
-          const ocrText = await extractImageTextWithOcr(bytes);
-          if (isTextSufficientForStructuring(ocrText)) {
-            return { ok: true, text: ocrText, usedOcr: true };
-          }
-        }
-        if (!isTextSufficientForStructuring(text)) {
-          return {
-            ok: false,
-            category: "insufficient_text",
-            message: "Could not read enough text from this PDF.",
-            preserveUpload: true,
-          };
-        }
+        return {
+          ok: false,
+          category: "insufficient_text",
+          message:
+            "Could not read enough embedded text from this PDF. Upload a text-based PDF, DOCX, or a clear resume image.",
+          preserveUpload: true,
+        };
       }
       return { ok: true, text, usedOcr: false };
     }
@@ -138,7 +136,7 @@ export async function extractResumeTextFromBytes(
         };
       }
       try {
-        const text = await extractImageTextWithOcr(bytes);
+        const text = await extractImageTextWithOcr(bytes, kind);
         if (!isTextSufficientForStructuring(text)) {
           return {
             ok: false,

@@ -114,5 +114,9 @@ export function getConfiguredResumeExtractorId(): string | null {
 }
 
 export function isResumeOcrConfigured(): boolean {
-  return process.env.RESUME_OCR_PROVIDER?.trim().toLowerCase() === "openai";
+  if (process.env.RESUME_OCR_PROVIDER?.trim().toLowerCase() !== "openai") {
+    return false;
+  }
+  const key = process.env.OPENAI_API_KEY?.trim();
+  return Boolean(key && !key.startsWith("your-") && !key.includes("<"));
 }

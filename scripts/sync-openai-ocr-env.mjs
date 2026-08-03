@@ -1,17 +1,13 @@
+/**
+ * Sync OpenAI OCR env to Vercel (server-only). Never prints secret values.
+ * Requires OPENAI_API_KEY in .env.local (Platform API key, not ChatGPT login).
+ */
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 const ENV_FILE = path.join(ROOT, ".env.local");
-const KEYS = [
-  "NEXT_PUBLIC_SUPABASE_URL",
-  "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
-  "NEXT_PUBLIC_SITE_URL",
-];
-const STATIC_SERVER_VARS = {
-  RESUME_EXTRACTION_PROVIDER: "heuristic",
-};
 const TARGETS = ["production", "preview", "development"];
 
 function parseEnvFile(filePath) {
@@ -46,35 +42,26 @@ function syncVar(name, value, target) {
     console.error(`Failed ${name} (${target}): exit ${result.status}`);
     process.exit(result.status ?? 1);
   }
-  console.log(`Synced ${name} → ${target}`);
+  console.log(`Synced ${name} -> ${target}`);
+}
+
+if (!fs.existsSync(ENV_FILE)) {
+  console.error("Missing .env.local - add OPENAI_API_KEY there first.");
+  process.exit(1);
 }
 
 const env = parseEnvFile(ENV_FILE);
-for (const key of KEYS) {
-  const value = env[key];
-  if (!value || value.startsWith("YOUR_")) {
-    console.error(`Missing or placeholder: ${key}`);
-    process.exit(1);
-  }
-}
-
-const optionalSecretKeys = ["OPENAI_API_KEY"];
-for (const key of optionalSecretKeys) {
-  const value = env[key]?.trim();
-  if (!value || value.startsWith("your-") || value.includes("<")) {
-    console.warn(
-      `Skipping ${key} on Vercel (not set in .env.local). Run: node scripts/sync-openai-ocr-env.mjs`,
-    );
-  }
+const apiKey = env.OPENAI_API_KEY?.trim();
+if (!apiKey || apiKey.startsWith("your-") || apiKey.includes("<")) {
+  console.error(
+    "Set OPENAI_API_KEY in .env.local (Platform API key), then re-run this script.",
+  );
+  process.exit(1);
 }
 
 for (const target of TARGETS) {
-  for (const key of KEYS) {
-    syncVar(key, env[key], target);
-  }
-  for (const [key, value] of Object.entries(STATIC_SERVER_VARS)) {
-    syncVar(key, value, target);
-  }
+  syncVar("RESUME_OCR_PROVIDER", "openai", target);
+  syncVar("OPENAI_API_KEY", apiKey, target);
 }
 
-console.log("All environment variables synced.");
+console.log("OpenAI OCR variables synced to Vercel. Redeploy production to apply.");
