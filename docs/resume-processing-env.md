@@ -10,7 +10,7 @@ Set these in the server environment (never expose to the browser).
 
 If unset in code, the app also defaults to `heuristic`. Set explicitly on Vercel/production so behavior is obvious.
 
-Image resumes (JPEG/PNG) and scanned PDFs need OCR only when you opt in below. Until then, uploads still work; suggestions may be limited with a clear message.
+Uploads are limited to PDF and DOCX files up to 10 MB. Legacy DOC and image files are rejected.
 
 ## Optional (paid OpenAI Platform API)
 
@@ -19,13 +19,11 @@ A **ChatGPT Plus/Pro subscription does not include OpenAI API usage.** API keys 
 | Variable | Purpose |
 | --- | --- |
 | `RESUME_EXTRACTION_PROVIDER=openai` | LLM-based structured extraction |
-| `OPENAI_API_KEY` | Required for `openai` provider and OCR |
+| `OPENAI_API_KEY` | Required only for the optional `openai` structuring provider |
 | `RESUME_EXTRACTION_MODEL` | Optional structuring model (default `gpt-4o-mini`) |
-| `RESUME_OCR_PROVIDER=openai` | Image / low-text PDF OCR via vision API |
-| `RESUME_OCR_MODEL` | Optional OCR model (default `gpt-4o-mini`) |
 
 Set `RESUME_EXTRACTION_PROVIDER=off` to disable automatic suggestions entirely (upload still works).
 
 Supabase service role credentials remain server-only for account administration.
 
-Migration: `20260803220000_resume_parsing.sql`
+Migrations: `20260803220000_resume_parsing.sql`, `20260803230000_restrict_resume_formats.sql`

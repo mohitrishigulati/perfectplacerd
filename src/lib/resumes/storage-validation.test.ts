@@ -44,7 +44,7 @@ describe("resume file validation", () => {
   it("rejects mime and extension mismatch", () => {
     const result = validateResumeFileContent(
       MIN_PDF,
-      "image/png",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       "resume.pdf",
     );
     expect(result.ok).toBe(false);
@@ -63,9 +63,18 @@ describe("resume file validation", () => {
     expect(result.ok).toBe(false);
   });
 
-  it("rejects svg content for png uploads", () => {
-    const svg = new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg"></svg>');
-    const result = validateResumeFileContent(svg, "image/png", "scan.png");
-    expect(result.ok).toBe(false);
+  it("rejects legacy DOC and image resumes", () => {
+    const legacyDoc = validateResumeFileContent(
+      new Uint8Array([0xd0, 0xcf, 0x11, 0xe0]),
+      "application/msword",
+      "resume.doc",
+    );
+    const image = validateResumeFileContent(
+      new Uint8Array([0xff, 0xd8, 0xff]),
+      "image/jpeg",
+      "resume.jpg",
+    );
+    expect(legacyDoc.ok).toBe(false);
+    expect(image.ok).toBe(false);
   });
 });

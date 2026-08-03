@@ -88,19 +88,10 @@ export async function runSyntheticResumeChecks(): Promise<SyntheticCheck[]> {
     "synthetic.jpg",
   );
   checks.push({
-    id: "jpeg-valid",
-    pass: jpegValidation.ok,
-    detail: jpegValidation.ok ? "valid" : jpegValidation.message,
+    id: "jpeg-rejected",
+    pass: !jpegValidation.ok,
+    detail: jpegValidation.ok ? "should reject" : "rejected",
   });
-
-  if (jpegValidation.ok) {
-    const ocr = await extractResumeTextFromBytes(jpeg, "jpeg");
-    checks.push({
-      id: "jpeg-ocr-state",
-      pass: !ocr.ok && ocr.category === "ocr_unavailable",
-      detail: ocr.ok ? "unexpected ocr success" : ocr.category,
-    });
-  }
 
   const bad = readFixture("unsupported.txt");
   const badAsPdf = validateResumeFileContent(

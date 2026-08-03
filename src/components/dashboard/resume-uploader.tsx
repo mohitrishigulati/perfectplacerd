@@ -9,7 +9,12 @@ import { buildResumeStorageObjectPath } from "@/lib/resumes/safe-filename";
 import type { PrimaryResume } from "@/lib/dashboard/queries";
 
 const ACCEPT =
-  ".pdf,.doc,.docx,.jpg,.jpeg,.png,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png";
+  ".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+const MAX_RESUME_BYTES = 10 * 1024 * 1024;
+const ALLOWED_MIME_TYPES = new Set([
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+]);
 
 type UploadStage =
   | "idle"
@@ -56,6 +61,16 @@ export function ResumeUploader({ userId, resume }: Props) {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
+
+    if (!ALLOWED_MIME_TYPES.has(file.type)) {
+      setError("Only PDF or DOCX resumes are allowed.");
+      return;
+    }
+
+    if (file.size > MAX_RESUME_BYTES) {
+      setError("Resumes must be 10 MB or smaller.");
+      return;
+    }
 
     if (!consent) {
       setError(
@@ -139,7 +154,7 @@ export function ResumeUploader({ userId, resume }: Props) {
         Private resume
       </h2>
       <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-        PDF, Word, or JPEG/PNG up to 10&nbsp;MB. Files stay in a private bucket
+        PDF or DOCX only, up to 10&nbsp;MB. Files stay in a private bucket
         accessible to you and authorized recruiters reviewing your applications.
       </p>
 

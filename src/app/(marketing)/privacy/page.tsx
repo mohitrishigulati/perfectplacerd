@@ -62,8 +62,7 @@ export default function PrivacyPage() {
         </p>
         <ul>
           <li>
-            Supported formats: PDF, Word (DOC/DOCX), and JPEG/PNG images up to
-            10&nbsp;MB.
+            Supported formats: PDF and DOCX files up to 10&nbsp;MB.
           </li>
           <li>
             Files are stored in a private bucket. Structured suggestions and

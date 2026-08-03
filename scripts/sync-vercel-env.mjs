@@ -58,16 +58,6 @@ for (const key of KEYS) {
   }
 }
 
-const optionalSecretKeys = ["OPENAI_API_KEY"];
-for (const key of optionalSecretKeys) {
-  const value = env[key]?.trim();
-  if (!value || value.startsWith("your-") || value.includes("<")) {
-    console.warn(
-      `Skipping ${key} on Vercel (not set in .env.local). Run: node scripts/sync-openai-ocr-env.mjs`,
-    );
-  }
-}
-
 for (const target of TARGETS) {
   for (const key of KEYS) {
     syncVar(key, env[key], target);

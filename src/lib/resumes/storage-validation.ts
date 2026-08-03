@@ -10,36 +10,19 @@ export const MAX_RESUME_BYTES = 10 * 1024 * 1024;
 
 export const ALLOWED_RESUME_MIME_TYPES = new Set([
   "application/pdf",
-  "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "image/jpeg",
-  "image/png",
 ]);
 
-const ALLOWED_EXTENSIONS = new Set([
-  ".pdf",
-  ".doc",
-  ".docx",
-  ".jpg",
-  ".jpeg",
-  ".png",
-]);
+const ALLOWED_EXTENSIONS = new Set([".pdf", ".docx"]);
 
 const EXTENSION_TO_KIND: Record<string, DetectedFileKind> = {
   ".pdf": "pdf",
-  ".doc": "doc",
   ".docx": "docx",
-  ".jpg": "jpeg",
-  ".jpeg": "jpeg",
-  ".png": "png",
 };
 
 const MIME_TO_KIND: Record<string, DetectedFileKind> = {
   "application/pdf": "pdf",
-  "application/msword": "doc",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
-  "image/jpeg": "jpeg",
-  "image/png": "png",
 };
 
 export type ResumeValidationFailure =
@@ -102,7 +85,7 @@ export function validateResumeFileContent(
     return {
       ok: false,
       reason: "extension",
-      message: "Unsupported file type. Use PDF, Word, or JPEG/PNG images.",
+      message: "Unsupported file type. Upload a PDF or DOCX resume.",
     };
   }
 
@@ -111,7 +94,7 @@ export function validateResumeFileContent(
     return {
       ok: false,
       reason: "mime",
-      message: "Unsupported file type. Use PDF, Word, or JPEG/PNG images.",
+      message: "Unsupported file type. Upload a PDF or DOCX resume.",
     };
   }
 
@@ -172,17 +155,6 @@ export function validateResumeFileContent(
     return { ok: true, kind: "pdf" };
   }
 
-  if (expectedFromExt === "doc") {
-    if (detected !== "doc") {
-      return {
-        ok: false,
-        reason: "signature",
-        message: "File content does not match a valid Word document.",
-      };
-    }
-    return { ok: true, kind: "doc" };
-  }
-
   if (expectedFromExt === "docx") {
     if (isZipDocx(bytes)) {
       return { ok: true, kind: "docx" };
@@ -194,28 +166,6 @@ export function validateResumeFileContent(
     };
   }
 
-  if (expectedFromExt === "jpeg") {
-    if (detected !== "jpeg") {
-      return {
-        ok: false,
-        reason: "signature",
-        message: "File content does not match a valid JPEG image.",
-      };
-    }
-    return { ok: true, kind: "jpeg" };
-  }
-
-  if (expectedFromExt === "png") {
-    if (detected !== "png") {
-      return {
-        ok: false,
-        reason: "signature",
-        message: "File content does not match a valid PNG image.",
-      };
-    }
-    return { ok: true, kind: "png" };
-  }
-
   return {
     ok: false,
     reason: "signature",
@@ -224,4 +174,4 @@ export function validateResumeFileContent(
 }
 
 export const RESUME_UPLOAD_REJECT_MESSAGE =
-  "Only PDF, Word (DOC/DOCX), or JPEG/PNG images up to 10 MB are allowed.";
+  "Only PDF or DOCX resumes up to 10 MB are allowed.";
