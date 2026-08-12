@@ -1,19 +1,13 @@
-import { SiteFooter } from "@/components/marketing/site-footer";
-import { SiteHeader } from "@/components/marketing/site-header";
-import { getSessionUser } from "@/lib/auth/session";
+import { MarketingChrome } from "@/components/marketing/marketing-chrome";
 
-export default async function OpportunitiesLayout({
+export default function OpportunitiesLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const user = await getSessionUser();
-
   return (
-    <div className="flex min-h-full flex-1 flex-col bg-[var(--pp-cream)]">
-      <SiteHeader userSignedIn={Boolean(user)} />
-      <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">{children}</div>
-      <SiteFooter />
-    </div>
+    <MarketingChrome contentClassName="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
+      {children}
+    </MarketingChrome>
   );
 }
